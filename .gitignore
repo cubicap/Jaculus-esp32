@@ -1,0 +1,4 @@
+﻿build
+.vscode
+managed_components
+dependencies.lock
