@@ -55,10 +55,23 @@ private:
     bool processListDir(int sender, std::span<const uint8_t> data);
     bool processCreateDir(int sender, std::span<const uint8_t> data);
     bool processDeleteDir(int sender, std::span<const uint8_t> data);
+
+    std::thread _thread;
 public:
     Uploader(std::unique_ptr<BufferedInputPacketCommunicator> input, std::unique_ptr<OutputPacketCommunicator> output):
         input(std::move(input)),
         output(std::move(output))
-    {}
-    void process();
+    {
+        _thread = std::thread([this]() {
+            while (true) {
+                auto [sender, data] = this->input->get();
+                processPacket(sender, std::span<const uint8_t>(data.begin(), data.end()));
+            }
+        });
+    }
+
+    Uploader(const Uploader&) = delete;
+    Uploader(Uploader&&) = delete;
+    Uploader& operator=(const Uploader&) = delete;
+    Uploader& operator=(Uploader&&) = delete;
 };

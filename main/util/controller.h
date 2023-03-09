@@ -11,6 +11,8 @@
 #include <optional>
 #include <thread>
 
+#include "esp_pthread.h"
+
 
 template<class Machine>
 class Controller {
@@ -28,6 +30,8 @@ class Controller {
     std::function<std::string()> _getStorageStats;
 
     std::vector<std::function<void(Machine&)>> _onConfigureMachine;
+
+    std::thread _controllerThread;
 
     void configureMachine() {
         _machine = std::make_unique<Machine>();
@@ -55,50 +59,48 @@ public:
         Logger::_logStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 255, std::vector<int>{});
         Logger::_debugStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 254, std::vector<int>{});
 
-        auto uploaderInput = std::make_unique<UnboundedBufferedInputPacketCommunicator>();
+        auto uploaderInput = std::make_unique<AsyncBufferedInputPacketCommunicator>();
         auto uploaderOutput = std::make_unique<TransparentOutputPacketCommunicator>(_router, 1);
         _router.subscribeChannel(1, *uploaderInput);
 
-        _uploader = Uploader(std::move(uploaderInput), std::move(uploaderOutput));
+        _uploader.emplace(std::move(uploaderInput), std::move(uploaderOutput));
 
-        auto controllerInput = std::make_unique<UnboundedBufferedInputPacketCommunicator>();
+        auto controllerInput = std::make_unique<AsyncBufferedInputPacketCommunicator>();
         _router.subscribeChannel(0, *controllerInput);
         _input = std::move(controllerInput);
         _output = std::make_unique<TransparentOutputPacketCommunicator>(_router, 0);
-    }
 
-    void process() {
-        _uploader->process();
-
-        while (_input->available() > 0) {
-            auto [sender, data] = _input->get();
-            if (data.size() == 0) {
-                continue;
-            }
-            auto begin = data.begin();
-            Command cmd = static_cast<Command>(data[0]);
-            begin++;
-
-            Logger::debug(std::string("Controller: ") + std::to_string(static_cast<int>(cmd)));
-
-            switch (cmd) {
-                case Command::START: {
-                    processStart(sender, std::span<const uint8_t>(begin, data.end()));
-                    break;
+        _controllerThread = std::thread([this]() {
+            while (true) {
+                auto [sender, data] = _input->get();
+                if (data.size() == 0) {
+                    continue;
                 }
-                case Command::STOP: {
-                    processStop(sender);
-                    break;
-                }
-                case Command::STATUS: {
-                    processStatus(sender);
-                    break;
-                }
-                default: {
-                    break;
+                auto begin = data.begin();
+                Command cmd = static_cast<Command>(data[0]);
+                begin++;
+
+                Logger::debug(std::string("Controller: ") + std::to_string(static_cast<int>(cmd)));
+
+                switch (cmd) {
+                    case Command::START: {
+                        processStart(sender, std::span<const uint8_t>(begin, data.end()));
+                        break;
+                    }
+                    case Command::STOP: {
+                        processStop(sender);
+                        break;
+                    }
+                    case Command::STATUS: {
+                        processStatus(sender);
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
                 }
             }
-        }
+        });
     }
 
     Router& router() {
@@ -171,6 +173,10 @@ bool Controller<Machine>::startMachine(std::string path) {
         Logger::log("File not found: " + path);
         return false;
     }
+
+    esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+    cfg.stack_size = 8 * 1024;
+    esp_pthread_set_cfg(&cfg);
 
     _thread = std::thread([this, path]() {
         Controller<Machine>& self = *this;

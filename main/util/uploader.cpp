@@ -48,14 +48,6 @@ bool deleteDir(std::string path) {
     return std::filesystem::remove(path);
 }
 
-
-void Uploader::process() {
-    while (input->available()) {
-        auto [sender, data] = input->get();
-        processPacket(sender, std::span<const uint8_t>(data.begin(), data.end()));
-    }
-}
-
 bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
     if (data.size() < 1) {
         return false;
