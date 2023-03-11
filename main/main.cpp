@@ -28,6 +28,8 @@
 #include "util/uploader.h"
 #include "util/logger.h"
 
+// TODO: stop uploader, controller
+
 
 static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
 
@@ -61,7 +63,7 @@ using Mux_t = Mux<CobsPacketizer, CobsSerializer, SerialStream>;
 std::unique_ptr<Mux_t> mux;
 
 int main() {
-    // Initialize NVS
+    // Initialize vfs
     esp_vfs_fat_mount_config_t conf = {
         .format_if_mount_failed = true,
         .max_files = 5,
