@@ -1,7 +1,10 @@
-# Jaculus - JavaScript runtime for ESP32 platform
+# Jaculus - JavaScript runtime for embedded devices
 
-Jaculus allows you to run JavaScript code on the ESP32.
+Jaculus allows you to run JavaScript code on embedded platforms. Currently works on the ESP32 and ESP32-S3.
 
+## Usage
+
+You can install Jaculus to your device manually using ESP-IDF or using [Jaculus-tools](https://github.com/cubicap/Jaculus-tools), which are then used to program and control the device.
 
 # License
 
