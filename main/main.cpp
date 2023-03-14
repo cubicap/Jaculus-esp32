@@ -104,8 +104,8 @@ int main() {
         machine.linkIo._output = std::move(machineOutput);
     });
 
-    if (std::filesystem::exists("/data/main.js")) {
-        controller.startMachine("/data/main.js");
+    if (std::filesystem::exists("/data/index.js")) {
+        controller.startMachine("/data/index.js");
     }
 }
 

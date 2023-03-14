@@ -193,6 +193,10 @@ bool Controller<Machine>::startMachine(std::string path) {
         catch (const std::runtime_error& e) {
             Logger::log("Runtime error - " + std::string(e.what()));
         }
+        catch (jac::Exception& e) {
+            Logger::log("Jac exception - " + std::string(e.what()));
+            Logger::log("Stack trace:" + e.stackTrace());
+        }
         catch (const std::exception& e) {
             Logger::log("Exception - " + std::string(e.what()));
         }
