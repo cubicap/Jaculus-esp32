@@ -1,9 +1,11 @@
 #include <jac/machine/machine.h>
-#include <jac/features/asyncEventLoopFeature.h>
-#include <jac/features/asyncTimersFeature.h>
+#include <jac/features/eventLoopFeature.h>
+#include <jac/features/eventQueueFeature.h>
+#include <jac/features/timersFeature.h>
 #include <jac/features/yieldFeature.h>
 #include <jac/features/moduleLoaderFeature.h>
 #include <jac/features/filesystemFeature.h>
+#include <jac/features/basicStreamFeature.h>
 #include <jac/machine/values.h>
 
 #include "features/wdtResetFeature.h"
@@ -35,17 +37,19 @@ static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
 
 using Machine =
     EventLoopTerminal<
-    AsyncTimersFeature<
+    TimersFeature<
     YieldFeature<
     WdtResetFeature<
-    AsyncEventLoopFeature<
+    EventLoopFeature<
+    EventQueueFeature<
     NeopixelFeature<
     GpioFeature<
     LinkIoFeature<
+    BasicStreamFeature<
     ModuleLoaderFeature<
     FilesystemFeature<
     jac::MachineBase
->>>>>>>>>>;
+>>>>>>>>>>>>;
 
 Controller<Machine> controller([]() {
     std::stringstream oss;
@@ -101,7 +105,8 @@ int main() {
 
     controller.onConfigureMachine([&](Machine &machine) {
         auto machineOutput = std::make_unique<TransparentOutputStreamCommunicator>(controller.router(), 2, std::vector<int>{});
-        machine.linkIo._output = std::move(machineOutput);
+        machine.stdio.out = std::make_unique<Machine::LinkWritable>(std::move(machineOutput));
+        machine.stdio.err = std::make_unique<Machine::WritableRef>(machine.stdio.out.get()); // TODO
     });
 
     if (std::filesystem::exists("/data/index.js")) {
