@@ -7,6 +7,8 @@
 
 #include <jac/link/routerCommunicator.h>
 
+#include "esp_pthread.h"
+
 
 class Uploader {
 public:
@@ -62,6 +64,10 @@ public:
         input(std::move(input)),
         output(std::move(output))
     {
+        esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+        cfg.stack_size = 6 * 1024;
+        esp_pthread_set_cfg(&cfg);
+
         _thread = std::thread([this]() {
             while (true) {
                 auto [sender, data] = this->input->get();

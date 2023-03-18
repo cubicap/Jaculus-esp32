@@ -153,7 +153,13 @@ void Controller<Machine>::processStatus(int sender) {
     auto response = this->_output->buildPacket({sender});
     response->put(static_cast<uint8_t>(Command::STATUS));
     response->put(static_cast<uint8_t>(_running));
-    response->put(_machine->eventLoop_getExitCode());
+
+    if (_machine) {
+        response->put(_machine->eventLoop_getExitCode());
+    }
+    else {
+        response->put(static_cast<uint8_t>(0));
+    }
 
     std::stringstream oss;
     oss << "Memory usage: " << _getMemoryStats() << std::endl;

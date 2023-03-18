@@ -1,6 +1,5 @@
 #include <jac/machine/machine.h>
 #include <jac/features/eventLoopFeature.h>
-#include <jac/features/eventQueueFeature.h>
 #include <jac/features/timersFeature.h>
 #include <jac/features/yieldFeature.h>
 #include <jac/features/moduleLoaderFeature.h>
@@ -12,6 +11,7 @@
 #include "features/neopixelFeature.h"
 #include "features/gpioFeature.h"
 #include "features/linkIoFeature.h"
+#include "features/freeRTOSEventQueue.h"
 
 #include <jac/link/mux.h>
 #include <jac/link/mux.h>
@@ -41,7 +41,7 @@ using Machine =
     YieldFeature<
     WdtResetFeature<
     EventLoopFeature<
-    EventQueueFeature<
+    FreeRTOSEventQueueFeature<
     NeopixelFeature<
     GpioFeature<
     LinkIoFeature<
