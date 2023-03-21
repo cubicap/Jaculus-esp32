@@ -40,10 +40,10 @@ using Machine =
     TimersFeature<
     YieldFeature<
     WdtResetFeature<
-    EventLoopFeature<
-    FreeRTOSEventQueueFeature<
     NeopixelFeature<
     GpioFeature<
+    EventLoopFeature<
+    FreeRTOSEventQueueFeature<
     LinkIoFeature<
     BasicStreamFeature<
     ModuleLoaderFeature<

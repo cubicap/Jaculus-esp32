@@ -174,6 +174,9 @@ bool Controller<Machine>::startMachine(std::string path) {
     if (_running) {
         return false;
     }
+    if (_thread.joinable()) {
+        _thread.join();
+    }
 
     if (!std::filesystem::exists(path)) {
         Logger::log("File not found: " + path);
