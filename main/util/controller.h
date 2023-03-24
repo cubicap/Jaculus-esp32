@@ -5,6 +5,7 @@
 #include "uploader.h"
 #include "logger.h"
 #include <jac/link/routerCommunicator.h>
+#include "lock.h"
 
 #include <sstream>
 #include <filesystem>
@@ -33,23 +34,40 @@ class Controller {
 
     std::thread _controllerThread;
 
+    TimeoutLock _lock = TimeoutLock(std::chrono::seconds(2));
+
     void configureMachine() {
         _machine = std::make_unique<Machine>();
         for (auto& f : _onConfigureMachine) {
             f(*_machine);
         }
     }
-public:
+
+    void processPacket(int sender, std::span<const uint8_t> data);
     void processStart(int sender, std::span<const uint8_t> data);
     void processStop(int sender);
     void processStatus(int sender);
+    void processLock(int sender);
+    void processUnlock(int sender);
+    void processForceUnlock(int sender);
+
+    void lockTimeout() {
+        Logger::debug("Controller: lock timeout");
+
+        _uploader->lockTimeout();
+    }
+public:
 
     enum class Command : uint8_t {
         START = 0x01,
         STOP = 0x02,
         STATUS = 0x03,
+        LOCK = 0x10,
+        UNLOCK = 0x11,
+        FORCE_UNLOCK = 0x12,
         OK = 0x20,
         ERROR = 0x21,
+        LOCK_NOT_OWNED = 0x22,
     };
 
     Controller(std::function<std::string()> getMemoryStats, std::function<std::string()> getStorageStats):
@@ -63,7 +81,7 @@ public:
         auto uploaderOutput = std::make_unique<TransparentOutputPacketCommunicator>(_router, 1);
         _router.subscribeChannel(1, *uploaderInput);
 
-        _uploader.emplace(std::move(uploaderInput), std::move(uploaderOutput));
+        _uploader.emplace(std::move(uploaderInput), std::move(uploaderOutput), _lock);
 
         auto controllerInput = std::make_unique<AsyncBufferedInputPacketCommunicator>();
         _router.subscribeChannel(0, *controllerInput);
@@ -73,32 +91,7 @@ public:
         _controllerThread = std::thread([this]() {
             while (true) {
                 auto [sender, data] = _input->get();
-                if (data.size() == 0) {
-                    continue;
-                }
-                auto begin = data.begin();
-                Command cmd = static_cast<Command>(data[0]);
-                begin++;
-
-                Logger::debug(std::string("Controller: ") + std::to_string(static_cast<int>(cmd)));
-
-                switch (cmd) {
-                    case Command::START: {
-                        processStart(sender, std::span<const uint8_t>(begin, data.end()));
-                        break;
-                    }
-                    case Command::STOP: {
-                        processStop(sender);
-                        break;
-                    }
-                    case Command::STATUS: {
-                        processStatus(sender);
-                        break;
-                    }
-                    default: {
-                        break;
-                    }
-                }
+                processPacket(sender, data);
             }
         });
     }
@@ -111,6 +104,10 @@ public:
         return *_uploader;
     }
 
+    TimeoutLock& lock() {
+        return _lock;
+    }
+
     bool startMachine(std::string path);
     bool stopMachine();
 
@@ -119,6 +116,54 @@ public:
     }
 };
 
+
+template<class Machine>
+void Controller<Machine>::processPacket(int sender, std::span<const uint8_t> data) {
+    if (data.size() == 0) {
+        return;
+    }
+    auto begin = data.begin();
+    Command cmd = static_cast<Command>(data[0]);
+    begin++;
+
+    _lock.reset(sender);
+
+    switch (cmd) {
+        case Command::LOCK:
+            processLock(sender);
+            return;
+        case Command::UNLOCK:
+            processUnlock(sender);
+            return;
+        case Command::FORCE_UNLOCK:
+            processForceUnlock(sender);
+            return;
+        default:
+            break;
+    }
+
+    if (!_lock.ownedBy(sender)) {
+        Logger::debug("Controller: lock not owned by sender " + std::to_string(sender));
+        auto response = this->_output->buildPacket({sender});
+        response->put(static_cast<uint8_t>(Command::LOCK_NOT_OWNED));
+        response->send();
+        return;
+    }
+
+    switch (cmd) {
+        case Command::START:
+            processStart(sender, std::span<const uint8_t>(begin, data.end()));
+            break;
+        case Command::STOP:
+            processStop(sender);
+            break;
+        case Command::STATUS:
+            processStatus(sender);
+            break;
+        default:
+            break;
+    }
+}
 
 template<class Machine>
 void Controller<Machine>::processStart(int sender, std::span<const uint8_t> data) {
@@ -167,6 +212,50 @@ void Controller<Machine>::processStatus(int sender) {
     std::string data = oss.str();
     response->put(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
     response->send();
+}
+
+template<class Machine>
+void Controller<Machine>::processLock(int sender) {
+    auto response = this->_output->buildPacket({sender});
+
+    auto callback = [this]() {
+        lockTimeout();
+    };
+
+    if (_lock.ownedBy(sender)) {
+        response->put(static_cast<uint8_t>(Command::ERROR));
+    }
+    else if (_lock.lock(sender, callback)) {
+        response->put(static_cast<uint8_t>(Command::OK));
+    }
+    else {
+        response->put(static_cast<uint8_t>(Command::ERROR));
+    }
+
+    response->send();
+}
+
+template<class Machine>
+void Controller<Machine>::processUnlock(int sender) {
+    auto response = this->_output->buildPacket({sender});
+
+    if (_lock.unlock(sender)) {
+        response->put(static_cast<uint8_t>(Command::OK));
+    }
+    else {
+        response->put(static_cast<uint8_t>(Command::ERROR));
+    }
+
+    response->send();
+}
+
+template<class Machine>
+void Controller<Machine>::processForceUnlock(int sender) {
+    auto response = this->_output->buildPacket({sender});
+
+    _lock.forceUnlock();
+
+    response->put(static_cast<uint8_t>(Command::OK));
 }
 
 template<class Machine>

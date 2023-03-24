@@ -63,7 +63,6 @@ public:
             this->stdio.out->println(args);
         }));
 
-        // TODO: reference the same io objects as cpp interface
         auto& module = this->newModule("stdio");
         module.addExport("stdout", Next::WritableClass::createInstance(this->_context, new Next::WritableRef(stdio.out.get())));
         module.addExport("stderr", Next::WritableClass::createInstance(this->_context, new Next::WritableRef(stdio.err.get())));

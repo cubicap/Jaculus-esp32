@@ -48,7 +48,22 @@ bool deleteDir(std::string path) {
     return std::filesystem::remove(path);
 }
 
+void Uploader::lockTimeout() {
+    _state = State::NONE;
+    _file.close();
+    _onData = nullptr;
+    _onDataComplete = nullptr;
+}
+
 bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
+    if (!_controllerLock.ownedBy(sender)) {
+        Logger::debug("Uploader: lock not owned by sender " + std::to_string(sender));
+        auto response = this->_output->buildPacket({sender});
+        response->put(static_cast<uint8_t>(Command::LOCK_NOT_OWNED));
+        response->send();
+        return false;
+    }
+
     if (data.size() < 1) {
         return false;
     }
@@ -56,20 +71,20 @@ bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
     Command cmd = static_cast<Command>(*begin);
     ++begin;
 
-    if (state == State::WAITING_FOR_DATA) {
+    if (_state == State::WAITING_FOR_DATA) {
         bool success = false;
         switch (cmd) {
             case Command::HAS_MORE_DATA:
-                success = onData(std::span<const uint8_t>(begin, data.end()));
+                success = _onData(std::span<const uint8_t>(begin, data.end()));
                 break;
             case Command::LAST_DATA:
-                success = onData(std::span<const uint8_t>(begin, data.end()));
+                success = _onData(std::span<const uint8_t>(begin, data.end()));
                 if (success) {
-                    success = (!onDataComplete) || onDataComplete();
-                    state = State::NONE;
-                    file.close();
-                    onData = nullptr;
-                    onDataComplete = nullptr;
+                    success = (!_onDataComplete) || _onDataComplete();
+                    _state = State::NONE;
+                    _file.close();
+                    _onData = nullptr;
+                    _onDataComplete = nullptr;
                 }
                 break;
             default:
@@ -78,10 +93,10 @@ bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
         }
 
         if (!success) {
-            state = State::NONE;
-            file.close();
-            onData = nullptr;
-            onDataComplete = nullptr;
+            _state = State::NONE;
+            _file.close();
+            _onData = nullptr;
+            _onDataComplete = nullptr;
         }
         return success;
     }
@@ -100,7 +115,7 @@ bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
         case Command::DELETE_DIR:
             return processDeleteDir(sender, std::span<const uint8_t>(begin, data.end()));
         default:
-            auto response = output->buildPacket({sender});
+            auto response = _output->buildPacket({sender});
             response->put(static_cast<uint8_t>(Command::ERROR));
             response->put(static_cast<uint8_t>(Error::UNKNOWN_COMMAND));
             response->put(static_cast<uint8_t>(cmd));
@@ -114,26 +129,26 @@ bool Uploader::processReadFile(int sender, std::span<const uint8_t> data) {
     auto begin = data.begin();
     std::string filename(begin, data.end());
 
-    file = std::fstream(filename, std::ios::in | std::ios::binary);
-    if (!file.is_open()) {
-        auto response = output->buildPacket({sender});
+    _file = std::fstream(filename, std::ios::in | std::ios::binary);
+    if (!_file.is_open()) {
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::NOT_FOUND));
         response->send();
         return false;
     }
 
-    std::vector<uint8_t> buff(output->maxPacketSize({sender}) - 1);
+    std::vector<uint8_t> buff(_output->maxPacketSize({sender}) - 1);
 
     Command prefix = Command::HAS_MORE_DATA;
     size_t read = 1;
     while (read > 0) {
-        file.read(reinterpret_cast<char*>(buff.data()), buff.size());
-        read = file.gcount();
+        _file.read(reinterpret_cast<char*>(buff.data()), buff.size());
+        read = _file.gcount();
 
         if (read < buff.size()) {
             prefix = Command::LAST_DATA;
         }
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(prefix));
         size_t sent = response->put(std::span(buff.data(), read));
         (void)sent;
@@ -146,7 +161,7 @@ bool Uploader::processWriteFile(int sender, std::span<const uint8_t> data) {
     // TODO: check if file is available for writing
     auto filenameEnd = std::find(data.begin(), data.end(), '\0');
     if (filenameEnd == data.end()) {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
         response->put(static_cast<uint8_t>(Error::INVALID_FILENAME));
 
@@ -155,27 +170,27 @@ bool Uploader::processWriteFile(int sender, std::span<const uint8_t> data) {
     }
     std::string filename(data.begin(), filenameEnd);
     auto begin = ++filenameEnd;
-    state = State::WAITING_FOR_DATA;
+    _state = State::WAITING_FOR_DATA;
     // TODO: delete file
-    file = std::fstream(filename, std::ios::out | std::ios::binary);
-    if (!file.is_open()) {
-        auto response = output->buildPacket({sender});
+    _file = std::fstream(filename, std::ios::out | std::ios::binary);
+    if (!_file.is_open()) {
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
         response->put(static_cast<uint8_t>(Error::FILE_OPEN_FAILED));
         response->send();
         return false;
     }
-    onData = [this, sender](std::span<const uint8_t> data) {
-        file.write(reinterpret_cast<const char*>(data.data()), data.size());
-        file.sync();
-        auto response = output->buildPacket({sender});
+    _onData = [this, sender](std::span<const uint8_t> data) {
+        _file.write(reinterpret_cast<const char*>(data.data()), data.size());
+        _file.sync();
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::CONTINUE));
         response->send();
         return true;
     };
-    onDataComplete = [this, sender]() {
-        file.close();
-        auto response = output->buildPacket({sender});
+    _onDataComplete = [this, sender]() {
+        _file.close();
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::OK));
         response->send();
         return true;
@@ -194,13 +209,13 @@ bool Uploader::processDeleteFile(int sender, std::span<const uint8_t> data) {
     std::string filename(begin, data.end());
 
     if (!std::filesystem::is_directory(filename) && std::filesystem::remove(filename)) {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::OK));
         response->send();
         return true;
     }
     else {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
         response->put(static_cast<uint8_t>(Error::FILE_DELETE_FAILED));
         response->send();
@@ -215,7 +230,7 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
 
     std::filesystem::path path(filename);
     if (!std::filesystem::is_directory(path)) {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::NOT_FOUND));
         response->send();
         return false;
@@ -231,7 +246,7 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
     auto result = listDir(path);
 
     if (!result) {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
         response->put(static_cast<uint8_t>(Error::DIR_OPEN_FAILED));
         response->send();
@@ -243,10 +258,10 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
     auto it = files.begin();
     Command prefix = Command::HAS_MORE_DATA;
     do {
-        if (dataSize <= output->maxPacketSize({sender}) - 1) {
+        if (dataSize <= _output->maxPacketSize({sender}) - 1) {
             prefix = Command::LAST_DATA;
         }
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(prefix));
         while (it != files.end() && it->size() + 1 <= response->space()) {
             response->put(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(it->data()), it->size()));
@@ -265,13 +280,13 @@ bool Uploader::processCreateDir(int sender, std::span<const uint8_t> data) {
     std::string filename(begin, data.end());
 
     if (std::filesystem::create_directory(filename)) {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::OK));
         response->send();
         return true;
     }
     else {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
         response->put(static_cast<uint8_t>(Error::DIR_CREATE_FAILED));
         response->send();
@@ -285,13 +300,13 @@ bool Uploader::processDeleteDir(int sender, std::span<const uint8_t> data) {
     std::string filename(begin, data.end());
 
     if (deleteDir(filename)) {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::OK));
         response->send();
         return true;
     }
     else {
-        auto response = output->buildPacket({sender});
+        auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
         response->put(static_cast<uint8_t>(Error::DIR_DELETE_FAILED));
         response->send();

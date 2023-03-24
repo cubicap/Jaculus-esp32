@@ -6,6 +6,7 @@
 #include <memory.h>
 
 #include <jac/link/routerCommunicator.h>
+#include "lock.h"
 
 #include "esp_pthread.h"
 
@@ -24,7 +25,8 @@ public:
         OK = 0x20,
         ERROR = 0x21,
         NOT_FOUND = 0x22,
-        CONTINUE = 0x23
+        CONTINUE = 0x23,
+        LOCK_NOT_OWNED = 0x24,
     };
 
     enum class Error : uint8_t {
@@ -34,7 +36,7 @@ public:
         DIR_OPEN_FAILED = 0x04,
         DIR_CREATE_FAILED = 0x05,
         DIR_DELETE_FAILED = 0x06,
-        INVALID_FILENAME = 0x07
+        INVALID_FILENAME = 0x07,
     };
 private:
     enum class State {
@@ -42,13 +44,13 @@ private:
         WAITING_FOR_DATA
     };
 
-    State state = State::NONE;
-    std::function<bool(std::span<const uint8_t>)> onData;
-    std::fstream file;
-    std::function<bool()> onDataComplete;
+    State _state = State::NONE;
+    std::function<bool(std::span<const uint8_t>)> _onData;
+    std::fstream _file;
+    std::function<bool()> _onDataComplete;
 
-    std::unique_ptr<BufferedInputPacketCommunicator> input;
-    std::unique_ptr<OutputPacketCommunicator> output;
+    std::unique_ptr<BufferedInputPacketCommunicator> _input;
+    std::unique_ptr<OutputPacketCommunicator> _output;
 
     bool processPacket(int sender, std::span<const uint8_t> data);
     bool processReadFile(int sender, std::span<const uint8_t> data);
@@ -59,10 +61,13 @@ private:
     bool processDeleteDir(int sender, std::span<const uint8_t> data);
 
     std::thread _thread;
+
+    TimeoutLock& _controllerLock;
 public:
-    Uploader(std::unique_ptr<BufferedInputPacketCommunicator> input, std::unique_ptr<OutputPacketCommunicator> output):
-        input(std::move(input)),
-        output(std::move(output))
+    Uploader(std::unique_ptr<BufferedInputPacketCommunicator> input, std::unique_ptr<OutputPacketCommunicator> output, TimeoutLock& lock):
+        _input(std::move(input)),
+        _output(std::move(output)),
+        _controllerLock(lock)
     {
         esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
         cfg.stack_size = 6 * 1024;
@@ -70,7 +75,7 @@ public:
 
         _thread = std::thread([this]() {
             while (true) {
-                auto [sender, data] = this->input->get();
+                auto [sender, data] = this->_input->get();
                 processPacket(sender, std::span<const uint8_t>(data.begin(), data.end()));
             }
         });
@@ -80,4 +85,6 @@ public:
     Uploader(Uploader&&) = delete;
     Uploader& operator=(const Uploader&) = delete;
     Uploader& operator=(Uploader&&) = delete;
+
+    void lockTimeout();
 };
