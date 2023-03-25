@@ -138,6 +138,9 @@ void Controller<Machine>::processPacket(int sender, std::span<const uint8_t> dat
         case Command::FORCE_UNLOCK:
             processForceUnlock(sender);
             return;
+        case Command::STATUS:
+            processStatus(sender);
+            return;
         default:
             break;
     }
@@ -156,9 +159,6 @@ void Controller<Machine>::processPacket(int sender, std::span<const uint8_t> dat
             break;
         case Command::STOP:
             processStop(sender);
-            break;
-        case Command::STATUS:
-            processStatus(sender);
             break;
         default:
             break;
