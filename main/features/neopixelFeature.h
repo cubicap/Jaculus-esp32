@@ -43,6 +43,18 @@ class NeopixelFeature : public Next {
             return new SmartLed(LED_WS2812, count, pin, 0, SingleBuffer);
         }
 
+        static void destroyOpaque(JSRuntime* rt, SmartLed* ptr) noexcept {
+            if (ptr->wait(0)) {
+                delete ptr;
+                return;
+            }
+
+            std::thread([ptr]() {
+                ptr->wait();
+                delete ptr;
+            }).detach();
+        }
+
         static void addProperties(JSContext* ctx, jac::Object proto) {
             jac::FunctionFactory ff(ctx);
 
