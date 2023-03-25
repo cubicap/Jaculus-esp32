@@ -36,6 +36,10 @@ class NeopixelFeature : public Next {
             int pin = args[0].to<int>();
             int count = args[1].to<int>();
 
+            if (Next::PlatformInfo::PinConfig::DIGITAL_PINS.find(pin) == Next::PlatformInfo::PinConfig::DIGITAL_PINS.end()) {
+                throw std::runtime_error("Invalid pin number");
+            }
+
             return new SmartLed(LED_WS2812, count, pin, 0, SingleBuffer);
         }
 

@@ -41,38 +41,30 @@ struct jac::ConvTraits<PinMode> {
 
 template<class Next>
 class GpioFeature : public Next {
-#if defined(CONFIG_IDF_TARGET_ESP32)
-    static inline const std::set<int> DIGITAL_PINS = { 0, 2, 4, 5, 12, 13, 14, 15, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 37, 38, 39 };
-    static inline const std::set<int> ANALOG_PINS = { 32, 33, 34, 35, 36, 37, 38, 39 };
-    static inline const std::set<int> INTERRUPT_PINS = DIGITAL_PINS;
-#elif defined(CONFIG_IDF_TARGET_ESP32S3)
-    static inline const std::set<int> DIGITAL_PINS = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 38, 45, 46, 47, 48 };
-    static inline const std::set<int> ANALOG_PINS = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    static inline const std::set<int> INTERRUPT_PINS = DIGITAL_PINS;
-#endif
+    using PinConfig = Next::PlatformInfo::PinConfig;
 
     static gpio_num_t getDigitalPin(int pin) {
-        if (DIGITAL_PINS.find(pin) == DIGITAL_PINS.end()) {
+        if (PinConfig::DIGITAL_PINS.find(pin) == PinConfig::DIGITAL_PINS.end()) {
             throw std::runtime_error("Invalid digital pin");
         }
         return static_cast<gpio_num_t>(pin);
     }
 
     static gpio_num_t getAnalogPin(int pin) {
-        if (ANALOG_PINS.find(pin) == ANALOG_PINS.end()) {
+        if (PinConfig::ANALOG_PINS.find(pin) == PinConfig::ANALOG_PINS.end()) {
             throw std::runtime_error("Invalid analog pin");
         }
         return static_cast<gpio_num_t>(pin);
     }
 
     static gpio_num_t getInterruptPin(int pin) {
-        if (INTERRUPT_PINS.find(pin) == INTERRUPT_PINS.end()) {
+        if (PinConfig::INTERRUPT_PINS.find(pin) == PinConfig::INTERRUPT_PINS.end()) {
             throw std::runtime_error("Invalid interrupt pin");
         }
         return static_cast<gpio_num_t>(pin);
     }
-
 public:
+
     class Gpio {
         class Interrupts {
             std::pair<std::unique_ptr<std::function<void()>>, bool> rising;
@@ -248,10 +240,10 @@ public:
     void initialize() {
         Next::initialize();
 
-        for (auto pin : DIGITAL_PINS) {
+        for (auto pin : PinConfig::DIGITAL_PINS) {
             gpio.pinMode(pin, PinMode::DISABLE);
         }
-        for (auto pin : INTERRUPT_PINS) {
+        for (auto pin : PinConfig::INTERRUPT_PINS) {
             gpio_intr_disable(getDigitalPin(pin));
         }
 
@@ -282,7 +274,7 @@ public:
     GpioFeature() : gpio(this) {}
 
     ~GpioFeature() {
-        for (auto pin : INTERRUPT_PINS) {
+        for (auto pin : PinConfig::INTERRUPT_PINS) {
             gpio_intr_disable(getDigitalPin(pin));
             gpio_isr_handler_remove(getDigitalPin(pin));
         }

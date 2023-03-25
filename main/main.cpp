@@ -30,10 +30,13 @@
 #include "util/uploader.h"
 #include "util/logger.h"
 
-// TODO: stop uploader, controller
 
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    #include "platform/esp32.h"
+#elif defined(CONFIG_IDF_TARGET_ESP32S3)
+    #include "platform/esp32s3.h"
+#endif
 
-static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
 
 using Machine =
     EventLoopTerminal<
@@ -48,8 +51,9 @@ using Machine =
     BasicStreamFeature<
     ModuleLoaderFeature<
     FilesystemFeature<
+    PlatformInfoFeature<
     jac::MachineBase
->>>>>>>>>>>>;
+>>>>>>>>>>>>>;
 
 Controller<Machine> controller([]() {
     std::stringstream oss;
@@ -74,6 +78,8 @@ int main() {
         .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
         .disk_status_check_enable = false
     };
+
+    static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
     ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl("/data", "storage", &conf, &s_wl_handle));
 
 
