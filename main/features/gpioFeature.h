@@ -66,17 +66,49 @@ class GpioFeature : public Next {
 public:
 
     class Gpio {
+        class InterruptQueue {
+            std::array<std::shared_ptr<std::function<void()>>, 32> queue;
+            std::array<std::shared_ptr<std::function<void()>>, 32>::iterator head = queue.begin();
+            std::array<std::shared_ptr<std::function<void()>>, 32>::iterator tail = queue.begin();
+
+            auto next(std::array<std::shared_ptr<std::function<void()>>, 32>::iterator it) {
+                it++;
+                return it == queue.end() ? queue.begin() : it;
+            }
+
+        public:
+            bool push(std::shared_ptr<std::function<void()>> callback) {
+                if (next(tail) == head) {
+                    return false;
+                }
+                *tail = callback;
+                tail = next(tail);
+                return true;
+            }
+
+            std::shared_ptr<std::function<void()>> pop() {
+                if (head == tail) {
+                    return nullptr;
+                }
+                auto callback = *head;
+                *head = nullptr;
+                head = next(head);
+                return callback;
+            }
+        };
+        InterruptQueue _interruptQueue;
+
         class Interrupts {
-            std::pair<std::unique_ptr<std::function<void()>>, bool> rising;
-            std::pair<std::unique_ptr<std::function<void()>>, bool> falling;
-            std::pair<std::unique_ptr<std::function<void()>>, bool> change;
+            std::pair<std::shared_ptr<std::function<void()>>, bool> rising;
+            std::pair<std::shared_ptr<std::function<void()>>, bool> falling;
+            std::pair<std::shared_ptr<std::function<void()>>, bool> change;
             gpio_num_t pin;
             GpioFeature* _feature;
 
         public:
             Interrupts(gpio_num_t pin, GpioFeature* feature) : pin(pin), _feature(feature) {}
 
-            std::pair<std::unique_ptr<std::function<void()>>, bool>& operator[](InterruptMode mode) {
+            std::pair<std::shared_ptr<std::function<void()>>, bool>& operator[](InterruptMode mode) {
                 switch (mode) {
                     case InterruptMode::RISING:
                         return rising;
@@ -151,29 +183,37 @@ public:
                 gpio_set_intr_type(pin, GPIO_INTR_ANYEDGE);
                 gpio_isr_handler_add(pin, [](void* arg) {
                     auto& callbacks = *static_cast<Interrupts*>(arg);
-                    auto* _feature = callbacks.getFeature();
+                    auto* feature = callbacks.getFeature();
+                    auto& interruptQueue = feature->gpio._interruptQueue;
+
                     static void (*call)(void*) = [](void* arg) {
-                        auto callback = static_cast<std::function<void()>*>(arg);
-                        (*callback)();
+                        auto& queue = *static_cast<InterruptQueue*>(arg);
+                        auto callback = queue.pop();
+                        if (callback) {
+                            (*callback)();
+                        }
                     };
 
                     if (callbacks[InterruptMode::CHANGE].first) {
                         if (callbacks[InterruptMode::CHANGE].second) {
-                            _feature->scheduleEventISR(call, callbacks[InterruptMode::CHANGE].first.get());
+                            interruptQueue.push(callbacks[InterruptMode::CHANGE].first);
+                            feature->scheduleEventISR(call, &interruptQueue);
                         } else {
                             (*callbacks[InterruptMode::CHANGE].first)();
                         }
                     }
-                    if (gpio_get_level(callbacks.getPin()) == 1 && callbacks[InterruptMode::RISING].first) {
+                    if (callbacks[InterruptMode::RISING].first && gpio_get_level(callbacks.getPin()) == 1) {
                         if (callbacks[InterruptMode::RISING].second) {
-                            _feature->scheduleEventISR(call, callbacks[InterruptMode::RISING].first.get());
+                            interruptQueue.push(callbacks[InterruptMode::RISING].first);
+                            feature->scheduleEventISR(call, &interruptQueue);
                         } else {
                             (*callbacks[InterruptMode::RISING].first)();
                         }
                     }
-                    if (gpio_get_level(callbacks.getPin()) == 0 && callbacks[InterruptMode::FALLING].first) {
+                    if (callbacks[InterruptMode::FALLING].first && gpio_get_level(callbacks.getPin()) == 0) {
                         if (callbacks[InterruptMode::FALLING].second) {
-                            _feature->scheduleEventISR(call, callbacks[InterruptMode::FALLING].first.get());
+                            interruptQueue.push(callbacks[InterruptMode::FALLING].first);
+                            feature->scheduleEventISR(call, &interruptQueue);
                         } else {
                             (*callbacks[InterruptMode::FALLING].first)();
                         }
