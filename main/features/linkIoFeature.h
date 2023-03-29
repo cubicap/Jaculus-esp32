@@ -59,7 +59,7 @@ public:
 
         jac::FunctionFactory ff(this->_context);
 
-        this->registerGlobal("print", ff.newFunctionVariadic([this](std::vector<jac::ValueConst> args) {
+        this->registerGlobal("print", ff.newFunctionVariadic([this](std::vector<jac::ValueWeak> args) {
             this->stdio.out->println(args);
         }));
 

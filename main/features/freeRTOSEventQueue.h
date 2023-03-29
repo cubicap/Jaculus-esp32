@@ -3,8 +3,9 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include <functional>
-#include <variant>
 #include <iostream>
+#include <optional>
+#include <variant>
 #include <tuple>
 
 template<class Next>
@@ -83,17 +84,16 @@ public:
     }
 
     /**
-     * @brief Check event queue for events and run one if available
+     * @brief Check the event queue and return the first event
      * @param wait Wait for event if no event is available
-     * @return true if event was run, false if no event was run
+     * @return Event or std::nullopt if no event is available
      */
-    bool runEvent(bool wait) {
+    std::optional<Event> getEvent(bool wait) {
         auto e(dequeue(wait));
-        if (e) {
-            e();
-            return true;
+        if (!e) {
+            return std::nullopt;
         }
-        return false;
+        return e;
     }
 
     /**

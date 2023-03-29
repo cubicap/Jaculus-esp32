@@ -32,7 +32,7 @@ struct jac::ConvTraits<PinMode> {
         return Value::from(ctx, mode);
     }
 
-    static PinMode from(ContextRef ctx, ValueConst val) {
+    static PinMode from(ContextRef ctx, ValueWeak val) {
         int mode = val.to<int>();
         return static_cast<PinMode>(mode);
     }

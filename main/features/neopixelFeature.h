@@ -19,7 +19,7 @@ struct jac::ConvTraits<Rgb> {
         return obj;
     }
 
-    static Rgb from(ContextRef ctx, ValueConst val) {
+    static Rgb from(ContextRef ctx, ValueWeak val) {
         auto obj = val.to<Object>();
         return Rgb(obj.get("r").to<int>(), obj.get("g").to<int>(), obj.get("b").to<int>());
     }
@@ -29,7 +29,7 @@ struct jac::ConvTraits<Rgb> {
 template<class Next>
 class NeopixelFeature : public Next {
     struct NeopixelProtoBuilder : public jac::ProtoBuilder::Opaque<SmartLed>, public jac::ProtoBuilder::Properties {
-        static SmartLed* constructOpaque(JSContext* ctx, std::vector<jac::ValueConst> args) {
+        static SmartLed* constructOpaque(JSContext* ctx, std::vector<jac::ValueWeak> args) {
             if (args.size() != 2) {
                 throw std::runtime_error("Invalid number of arguments");
             }
@@ -58,18 +58,18 @@ class NeopixelFeature : public Next {
         static void addProperties(JSContext* ctx, jac::Object proto) {
             jac::FunctionFactory ff(ctx);
 
-            addProp(ctx, proto, "show", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueConst thisValue) {
+            addProp(ctx, proto, "show", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue) {
                 SmartLed& led = *getOpaque(ctx, thisValue);
                 led.wait();
                 led.show();
             }));
 
-            addProp(ctx, proto, "set", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueConst thisValue, int idx, Rgb color) {
+            addProp(ctx, proto, "set", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue, int idx, Rgb color) {
                 SmartLed& strip = *getOpaque(ctx, thisValue);
                 strip[idx] = color;
             }));
 
-            addProp(ctx, proto, "get", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueConst thisValue, int idx) {
+            addProp(ctx, proto, "get", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue, int idx) {
                 SmartLed& strip = *getOpaque(ctx, thisValue);
                 return strip[idx];
             }));
