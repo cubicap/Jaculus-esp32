@@ -55,11 +55,11 @@ using Machine =
     jac::MachineBase
 >>>>>>>>>>>>>;
 
-Controller<Machine> controller([]() {
+Controller<Machine> controller([]() { // get memory stats
     std::stringstream oss;
     oss << esp_get_free_heap_size() << "/" << esp_get_minimum_free_heap_size();
     return oss.str();
-}, []() {
+}, []() { // get storage stats
     // std::stringstream oss;
     // auto stats = std::filesystem::space("/data");
     // oss << "Storage usage: \n  " << stats.available << "/" << stats.capacity << "\n";
@@ -110,9 +110,9 @@ int main() {
 
 
     controller.onConfigureMachine([&](Machine &machine) {
-        auto machineOutput = std::make_unique<TransparentOutputStreamCommunicator>(controller.router(), 2, std::vector<int>{});
-        machine.stdio.out = std::make_unique<Machine::LinkWritable>(std::move(machineOutput));
-        machine.stdio.err = std::make_unique<Machine::WritableRef>(machine.stdio.out.get()); // TODO
+        machine.stdio.out = std::make_unique<Machine::LinkWritable>(controller.machineIO().out.get());
+        machine.stdio.err = std::make_unique<Machine::LinkWritable>(controller.machineIO().err.get());
+        machine.stdio.in = std::make_unique<Machine::LinkReadable>(controller.machineIO().in.get());
     });
 
     if (std::filesystem::exists("/data/index.js")) {

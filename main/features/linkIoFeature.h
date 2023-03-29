@@ -22,9 +22,9 @@ private:
     };
 public:
     class LinkWritable : public Next::Writable {
-        std::unique_ptr<OutputStreamCommunicator> comm;
+        OutputStreamCommunicator* comm;
     public:
-        LinkWritable(std::unique_ptr<OutputStreamCommunicator> comm): comm(std::move(comm)) {}
+        LinkWritable(OutputStreamCommunicator* comm): comm(std::move(comm)) {}
 
         void print(std::string str) override {
             comm->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(str.data()), str.size()));
@@ -32,9 +32,9 @@ public:
     };
 
     class LinkReadable : public Next::Readable {
-        std::unique_ptr<BufferedInputStreamCommunicator> comm;
+        BufferedInputStreamCommunicator* comm;
     public:
-        LinkReadable(std::unique_ptr<BufferedInputStreamCommunicator> comm): comm(std::move(comm)) {}
+        LinkReadable(BufferedInputStreamCommunicator* comm): comm(std::move(comm)) {}
         std::string readLine() override {
             std::string line;
             while (true) {

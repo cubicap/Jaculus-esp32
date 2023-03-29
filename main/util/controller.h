@@ -18,23 +18,29 @@
 template<class Machine>
 class Controller {
     Router _router;
+
     std::optional<Uploader> _uploader;
 
-    std::unique_ptr<BufferedInputPacketCommunicator> _input;
-    std::unique_ptr<OutputPacketCommunicator> _output;
+    std::unique_ptr<BufferedInputPacketCommunicator> _ctrlInput;
+    std::unique_ptr<OutputPacketCommunicator> _ctrlOutput;
+    std::thread _controllerThread;
+
+    TimeoutLock _lock = TimeoutLock(std::chrono::seconds(2));
 
     std::unique_ptr<Machine> _machine;
+    std::vector<std::function<void(Machine&)>> _onConfigureMachine;
     bool _running = false;
-    std::thread _thread;
+    std::thread _machineThread;
+
+    struct MachineIO {
+        std::unique_ptr<BufferedInputStreamCommunicator> in;
+        std::unique_ptr<OutputStreamCommunicator> out;
+        std::unique_ptr<OutputStreamCommunicator> err;
+    } _machineIO;
 
     std::function<std::string()> _getMemoryStats;
     std::function<std::string()> _getStorageStats;
 
-    std::vector<std::function<void(Machine&)>> _onConfigureMachine;
-
-    std::thread _controllerThread;
-
-    TimeoutLock _lock = TimeoutLock(std::chrono::seconds(2));
 
     void configureMachine() {
         _machine = std::make_unique<Machine>();
@@ -85,12 +91,18 @@ public:
 
         auto controllerInput = std::make_unique<AsyncBufferedInputPacketCommunicator>();
         _router.subscribeChannel(0, *controllerInput);
-        _input = std::move(controllerInput);
-        _output = std::make_unique<TransparentOutputPacketCommunicator>(_router, 0);
+        _ctrlInput = std::move(controllerInput);
+        _ctrlOutput = std::make_unique<TransparentOutputPacketCommunicator>(_router, 0);
+
+        auto _machineIn = std::make_unique<AsyncBufferedInputStreamCommunicator>(std::set<int>{});
+        _router.subscribeChannel(16, *_machineIn);
+        _machineIO.in = std::move(_machineIn);
+        _machineIO.out = std::make_unique<TransparentOutputStreamCommunicator>(_router, 16, std::vector<int>{});
+        _machineIO.err = std::make_unique<TransparentOutputStreamCommunicator>(_router, 17, std::vector<int>{});
 
         _controllerThread = std::thread([this]() {
             while (true) {
-                auto [sender, data] = _input->get();
+                auto [sender, data] = _ctrlInput->get();
                 processPacket(sender, data);
             }
         });
@@ -106,6 +118,10 @@ public:
 
     TimeoutLock& lock() {
         return _lock;
+    }
+
+    MachineIO& machineIO() {
+        return _machineIO;
     }
 
     bool startMachine(std::string path);
@@ -147,7 +163,7 @@ void Controller<Machine>::processPacket(int sender, std::span<const uint8_t> dat
 
     if (!_lock.ownedBy(sender)) {
         Logger::debug("Controller: lock not owned by sender " + std::to_string(sender));
-        auto response = this->_output->buildPacket({sender});
+        auto response = this->_ctrlOutput->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::LOCK_NOT_OWNED));
         response->send();
         return;
@@ -175,7 +191,7 @@ void Controller<Machine>::processStart(int sender, std::span<const uint8_t> data
         result = Command::ERROR;
     }
 
-    auto response = this->_output->buildPacket({sender});
+    auto response = this->_ctrlOutput->buildPacket({sender});
     response->put(static_cast<uint8_t>(result));
     response->send();
 }
@@ -188,14 +204,14 @@ void Controller<Machine>::processStop(int sender) {
         result = Command::ERROR;
     }
 
-    auto response = this->_output->buildPacket({sender});
+    auto response = this->_ctrlOutput->buildPacket({sender});
     response->put(static_cast<uint8_t>(result));
     response->send();
 }
 
 template<class Machine>
 void Controller<Machine>::processStatus(int sender) {
-    auto response = this->_output->buildPacket({sender});
+    auto response = this->_ctrlOutput->buildPacket({sender});
     response->put(static_cast<uint8_t>(Command::STATUS));
     response->put(static_cast<uint8_t>(_running));
 
@@ -216,7 +232,7 @@ void Controller<Machine>::processStatus(int sender) {
 
 template<class Machine>
 void Controller<Machine>::processLock(int sender) {
-    auto response = this->_output->buildPacket({sender});
+    auto response = this->_ctrlOutput->buildPacket({sender});
 
     auto callback = [this]() {
         lockTimeout();
@@ -237,7 +253,7 @@ void Controller<Machine>::processLock(int sender) {
 
 template<class Machine>
 void Controller<Machine>::processUnlock(int sender) {
-    auto response = this->_output->buildPacket({sender});
+    auto response = this->_ctrlOutput->buildPacket({sender});
 
     if (_lock.unlock(sender)) {
         response->put(static_cast<uint8_t>(Command::OK));
@@ -251,7 +267,7 @@ void Controller<Machine>::processUnlock(int sender) {
 
 template<class Machine>
 void Controller<Machine>::processForceUnlock(int sender) {
-    auto response = this->_output->buildPacket({sender});
+    auto response = this->_ctrlOutput->buildPacket({sender});
 
     _lock.forceUnlock();
 
@@ -263,8 +279,8 @@ bool Controller<Machine>::startMachine(std::string path) {
     if (_running) {
         return false;
     }
-    if (_thread.joinable()) {
-        _thread.join();
+    if (_machineThread.joinable()) {
+        _machineThread.join();
     }
 
     if (!std::filesystem::exists(path)) {
@@ -276,7 +292,7 @@ bool Controller<Machine>::startMachine(std::string path) {
     cfg.stack_size = 8 * 1024;
     esp_pthread_set_cfg(&cfg);
 
-    _thread = std::thread([this, path]() {
+    _machineThread = std::thread([this, path]() {
         Controller<Machine>& self = *this;
         self._running = true;
 
@@ -288,18 +304,19 @@ bool Controller<Machine>::startMachine(std::string path) {
             self._machine->evalFile(path);
             self._machine->eventLoop_run();
         }
-        catch (const std::runtime_error& e) {
-            Logger::log("Runtime error - " + std::string(e.what()));
-        }
         catch (jac::Exception& e) {
-            Logger::log("Jac exception - " + std::string(e.what()));
-            Logger::log("Stack trace:" + e.stackTrace());
+            std::string message = "Uncaught " + std::string(e.what()) + "\n" + e.stackTrace();
+            this->_machineIO.err->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
         }
         catch (const std::exception& e) {
-            Logger::log("Exception - " + std::string(e.what()));
+            std::string message = "Internal error: " + std::string(e.what());
+            this->_machineIO.err->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
+            Logger::log(message);
         }
         catch (...) {
-            Logger::log("Unknown exception");
+            std::string message = "Unkown internal error";
+            this->_machineIO.err->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
+            Logger::log(message);
         }
 
         self._running = false;
@@ -316,10 +333,10 @@ bool Controller<Machine>::stopMachine() {
 
     _machine->eventLoop_exit();
 
-    if (_thread.joinable()) {
-        _thread.join();
+    if (_machineThread.joinable()) {
+        _machineThread.join();
     }
-    _thread = std::thread();
+    _machineThread = std::thread();
 
     return true;
 }

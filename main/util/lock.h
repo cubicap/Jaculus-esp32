@@ -29,10 +29,11 @@ public:
             _locked = true;
             _owner = who;
             _timeout.start([this, callback]() {
-                _locked = false;
+                std::lock_guard<std::mutex> _(_mutex);
                 if (callback) {
                     callback();
                 }
+                _locked = false;
             });
 
             return true;
