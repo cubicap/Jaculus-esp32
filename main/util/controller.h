@@ -43,10 +43,12 @@ class Controller {
 
 
     void configureMachine() {
+        _machine = nullptr;
         _machine = std::make_unique<Machine>();
         for (auto& f : _onConfigureMachine) {
             f(*_machine);
         }
+        Logger::debug("Controller: machine configured");
     }
 
     void processPacket(int sender, std::span<const uint8_t> data);
@@ -83,18 +85,18 @@ public:
         Logger::_logStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 255, std::vector<int>{});
         Logger::_debugStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 254, std::vector<int>{});
 
-        auto uploaderInput = std::make_unique<AsyncBufferedInputPacketCommunicator>();
+        auto uploaderInput = std::make_unique<UnboundedBufferedInputPacketCommunicator>();
         auto uploaderOutput = std::make_unique<TransparentOutputPacketCommunicator>(_router, 1);
         _router.subscribeChannel(1, *uploaderInput);
 
         _uploader.emplace(std::move(uploaderInput), std::move(uploaderOutput), _lock);
 
-        auto controllerInput = std::make_unique<AsyncBufferedInputPacketCommunicator>();
+        auto controllerInput = std::make_unique<UnboundedBufferedInputPacketCommunicator>();
         _router.subscribeChannel(0, *controllerInput);
         _ctrlInput = std::move(controllerInput);
         _ctrlOutput = std::make_unique<TransparentOutputPacketCommunicator>(_router, 0);
 
-        auto _machineIn = std::make_unique<AsyncBufferedInputStreamCommunicator>(std::set<int>{});
+        auto _machineIn = std::make_unique<UnboundedBufferedInputStreamCommunicator>(std::set<int>{});
         _router.subscribeChannel(16, *_machineIn);
         _machineIO.in = std::move(_machineIn);
         _machineIO.out = std::make_unique<TransparentOutputStreamCommunicator>(_router, 16, std::vector<int>{});
@@ -317,6 +319,11 @@ bool Controller<Machine>::startMachine(std::string path) {
             std::string message = "Unkown internal error";
             this->_machineIO.err->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
             Logger::log(message);
+        }
+
+        {
+            std::string message = "Machine exited with code " + std::to_string(self._machine->eventLoop_getExitCode()) + "\n";
+            this->_machineIO.err->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
         }
 
         self._running = false;

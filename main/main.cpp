@@ -5,6 +5,7 @@
 #include <jac/features/moduleLoaderFeature.h>
 #include <jac/features/filesystemFeature.h>
 #include <jac/features/basicStreamFeature.h>
+#include <jac/features/stdioFeature.h>
 #include <jac/machine/values.h>
 
 #include "features/wdtResetFeature.h"
@@ -46,14 +47,15 @@ using Machine =
     NeopixelFeature<
     GpioFeature<
     EventLoopFeature<
-    FreeRTOSEventQueueFeature<
-    LinkIoFeature<
-    BasicStreamFeature<
     ModuleLoaderFeature<
     FilesystemFeature<
     PlatformInfoFeature<
+    LinkIoFeature<
+    StdioFeature<
+    BasicStreamFeature<
+    FreeRTOSEventQueueFeature<
     jac::MachineBase
->>>>>>>>>>>>>;
+>>>>>>>>>>>>>>;
 
 Controller<Machine> controller([]() { // get memory stats
     std::stringstream oss;
@@ -112,7 +114,7 @@ int main() {
     controller.onConfigureMachine([&](Machine &machine) {
         machine.stdio.out = std::make_unique<Machine::LinkWritable>(controller.machineIO().out.get());
         machine.stdio.err = std::make_unique<Machine::LinkWritable>(controller.machineIO().err.get());
-        machine.stdio.in = std::make_unique<Machine::LinkReadable>(controller.machineIO().in.get());
+        machine.stdio.in = std::make_unique<Machine::LinkReadable>(&machine, controller.machineIO().in.get());
     });
 
     if (std::filesystem::exists("/data/index.js")) {
