@@ -112,6 +112,8 @@ int main() {
 
 
     controller.onConfigureMachine([&](Machine &machine) {
+        controller.machineIO().in->clear();
+
         machine.stdio.out = std::make_unique<Machine::LinkWritable>(controller.machineIO().out.get());
         machine.stdio.err = std::make_unique<Machine::LinkWritable>(controller.machineIO().err.get());
         machine.stdio.in = std::make_unique<Machine::LinkReadable>(&machine, controller.machineIO().in.get());

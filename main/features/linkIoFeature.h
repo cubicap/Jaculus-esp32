@@ -16,8 +16,8 @@ public:
     public:
         LinkWritable(OutputStreamCommunicator* comm): comm(std::move(comm)) {}
 
-        void write(std::span<const uint8_t> buffer) override {
-            comm->write(buffer);
+        void write(std::string data) override {
+            comm->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
         }
     };
 
@@ -26,36 +26,53 @@ public:
         BufferedInputStreamCommunicator* comm;
         std::thread _thread;
         bool _running = false;
-    public:
-        LinkReadable(LinkIoFeature* machine, BufferedInputStreamCommunicator* comm): _machine(machine), comm(std::move(comm)) {}
-        LinkReadable(LinkReadable&) = delete;
-        LinkReadable(LinkReadable&&) = delete;
 
-        bool read(std::function<void(std::span<const uint8_t>)> callback) override {
+        bool startRead(auto callback) {
             if (_running) {
                 return false;
             }
             if (_thread.joinable()) {
                 _thread.join();
             }
-
             _running = true;
 
-            _thread = std::thread([this, callback = std::move(callback)]() mutable {
-                std::vector<char> buffer;
+            _thread = std::thread(std::move(callback));
+
+            return true;
+        }
+    public:
+        LinkReadable(LinkIoFeature* machine, BufferedInputStreamCommunicator* comm): _machine(machine), comm(std::move(comm)) {}
+        LinkReadable(LinkReadable&) = delete;
+        LinkReadable(LinkReadable&&) = delete;
+
+        bool get(std::function<void(char)> callback) override {
+            return startRead([this, callback = std::move(callback)]() mutable {
+                int res = comm->get();
+
+                if (res != 0) {
+                    _machine->scheduleEvent([callback = std::move(callback), res]() mutable {
+                        callback(static_cast<char>(res));
+                    });
+                }
+
+                _running = false;
+            });
+        }
+
+        bool read(std::function<void(std::string)> callback) override {
+            return startRead([this, callback = std::move(callback)]() mutable {
+                std::string buffer;
                 buffer.resize(256);
 
                 auto count = comm->read(std::span<uint8_t>(reinterpret_cast<uint8_t*>(buffer.data()), buffer.size()));
 
                 buffer.resize(count);
                 _machine->scheduleEvent([callback = std::move(callback), buffer = std::move(buffer)]() mutable {
-                    callback(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size()));
+                    callback(std::move(buffer));
                 });
 
                 _running = false;
             });
-
-            return true;
         }
 
         ~LinkReadable() override {
