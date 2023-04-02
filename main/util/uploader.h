@@ -1,11 +1,13 @@
 #pragma once
 
 #include <jac/link/router.h>
-#include <fstream>
+#include <jac/link/routerCommunicator.h>
+
+#include <atomic>
 #include <deque>
+#include <fstream>
 #include <memory.h>
 
-#include <jac/link/routerCommunicator.h>
 #include "lock.h"
 
 #include "esp_pthread.h"
@@ -61,6 +63,7 @@ private:
     bool processDeleteDir(int sender, std::span<const uint8_t> data);
 
     std::thread _thread;
+    std::atomic<bool> _stop = false;
 
     TimeoutLock& _controllerLock;
 public:
@@ -74,7 +77,7 @@ public:
         esp_pthread_set_cfg(&cfg);
 
         _thread = std::thread([this]() {
-            while (true) {
+            while (!_stop) {
                 auto [sender, data] = this->_input->get();
                 processPacket(sender, std::span<const uint8_t>(data.begin(), data.end()));
             }
@@ -87,4 +90,11 @@ public:
     Uploader& operator=(Uploader&&) = delete;
 
     void lockTimeout();
+
+    ~Uploader() {
+        _stop = true;
+        if (_thread.joinable()) {
+            _thread.join();
+        }
+    }
 };

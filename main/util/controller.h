@@ -7,9 +7,10 @@
 #include <jac/link/routerCommunicator.h>
 #include "lock.h"
 
-#include <sstream>
+#include <atomic>
 #include <filesystem>
 #include <optional>
+#include <sstream>
 #include <thread>
 
 #include "esp_pthread.h"
@@ -24,12 +25,13 @@ class Controller {
     std::unique_ptr<BufferedInputPacketCommunicator> _ctrlInput;
     std::unique_ptr<OutputPacketCommunicator> _ctrlOutput;
     std::thread _controllerThread;
+    std::atomic<bool> _controllerStop = false;
 
     TimeoutLock _lock = TimeoutLock(std::chrono::seconds(2));
 
     std::unique_ptr<Machine> _machine;
     std::vector<std::function<void(Machine&)>> _onConfigureMachine;
-    bool _running = false;
+    std::atomic<bool> _machineRunning = false;
     std::thread _machineThread;
 
     struct MachineIO {
@@ -103,11 +105,33 @@ public:
         _machineIO.err = std::make_unique<TransparentOutputStreamCommunicator>(_router, 17, std::vector<int>{});
 
         _controllerThread = std::thread([this]() {
-            while (true) {
-                auto [sender, data] = _ctrlInput->get();
+            while (!_controllerStop) {
+                int sender;
+                std::vector<uint8_t> data;
+                try {
+                    std::tie(sender, data) = _ctrlInput->get();
+                }
+                catch (const std::exception& e) {
+                    continue;
+                }
                 processPacket(sender, data);
             }
         });
+    }
+
+    Controller(const Controller&) = delete;
+    Controller& operator=(const Controller&) = delete;
+    Controller(Controller&&) = delete;
+    Controller& operator=(Controller&&) = delete;
+
+    ~Controller() {
+        _controllerStop = true;
+        _ctrlInput->cancelRead();
+        if (_controllerThread.joinable()) {
+            _controllerThread.join();
+        }
+
+        stopMachine();
     }
 
     Router& router() {
@@ -215,7 +239,7 @@ template<class Machine>
 void Controller<Machine>::processStatus(int sender) {
     auto response = this->_ctrlOutput->buildPacket({sender});
     response->put(static_cast<uint8_t>(Command::STATUS));
-    response->put(static_cast<uint8_t>(_running));
+    response->put(static_cast<uint8_t>(_machineRunning));
 
     if (_machine) {
         response->put(_machine->eventLoop_getExitCode());
@@ -278,7 +302,7 @@ void Controller<Machine>::processForceUnlock(int sender) {
 
 template<class Machine>
 bool Controller<Machine>::startMachine(std::string path) {
-    if (_running) {
+    if (_machineRunning) {
         return false;
     }
     if (_machineThread.joinable()) {
@@ -296,7 +320,7 @@ bool Controller<Machine>::startMachine(std::string path) {
 
     _machineThread = std::thread([this, path]() {
         Controller<Machine>& self = *this;
-        self._running = true;
+        self._machineRunning = true;
 
         Logger::log("Starting machine");
 
@@ -326,7 +350,7 @@ bool Controller<Machine>::startMachine(std::string path) {
             this->_machineIO.err->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
         }
 
-        self._running = false;
+        self._machineRunning = false;
     });
 
     return true;
@@ -334,7 +358,7 @@ bool Controller<Machine>::startMachine(std::string path) {
 
 template<class Machine>
 bool Controller<Machine>::stopMachine() {
-    if (!_running) {
+    if (!_machineRunning) {
         return false;
     }
 

@@ -4,6 +4,7 @@
 #include <jac/link/routerCommunicator.h>
 #include <jac/machine/functionFactory.h>
 
+#include <atomic>
 #include <vector>
 #include <thread>
 
@@ -25,7 +26,7 @@ public:
         LinkIoFeature* _machine;
         BufferedInputStreamCommunicator* comm;
         std::thread _thread;
-        bool _running = false;
+        std::atomic<bool> _running = false;
 
         bool startRead(auto callback) {
             if (_running) {

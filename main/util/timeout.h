@@ -63,6 +63,7 @@ public:
     }
 
     ~Timeout() {
+        std::lock_guard<std::mutex> lock(_mutex);
         _stop = true;
         _running = false;
         _cv.notify_all();

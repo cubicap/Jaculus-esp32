@@ -1,16 +1,18 @@
 #pragma once
 
 #include <jac/link/stream.h>
+#include <atomic>
 #include "driver/uart.h"
 
 #include "util/logger.h"
+
 
 class SerialStream : public Duplex {
     uart_port_t _port;
     std::function<void()> _onData;
     QueueHandle_t _eventQueue;
     std::thread _eventThread;
-    bool _stopThread = false;
+    std::atomic<bool> _stopThread = false;
 public:
     SerialStream(uart_port_t uartNum, int baudRate, int rxBufferSize, int txBufferSize,
                  int txPin = UART_PIN_NO_CHANGE, int rxPin = UART_PIN_NO_CHANGE,
