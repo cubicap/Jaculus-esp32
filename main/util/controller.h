@@ -84,8 +84,9 @@ public:
         _getMemoryStats(getMemoryStats),
         _getStorageStats(getStorageStats)
     {
-        Logger::_logStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 255, std::vector<int>{});
-        Logger::_debugStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 254, std::vector<int>{});
+        Logger::_errorStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 255, std::vector<int>{});
+        Logger::_logStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 253, std::vector<int>{});
+        Logger::_debugStream = std::make_unique<TransparentOutputStreamCommunicator>(_router, 251, std::vector<int>{});
 
         auto uploaderInput = std::make_unique<UnboundedBufferedInputPacketCommunicator>();
         auto uploaderOutput = std::make_unique<TransparentOutputPacketCommunicator>(_router, 1);
