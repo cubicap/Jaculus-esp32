@@ -1,4 +1,5 @@
 #include "uploader.h"
+#include "logger.h"
 
 #include <fstream>
 #include <memory>
@@ -18,7 +19,13 @@ std::optional<std::pair<std::vector<std::string>, size_t>> listDir(std::string p
         return std::nullopt;
     }
     while ((ent = readdir(dir)) != NULL) {
-        files.push_back(ent->d_name);
+        try {
+            files.push_back(ent->d_name);
+        }
+        catch (std::bad_alloc& e) {
+            closedir(dir);
+            return std::nullopt;
+        }
         dataSize += files.back().size() + 1;
     }
     closedir(dir);
@@ -64,6 +71,8 @@ bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
         return false;
     }
 
+    _controllerLock.reset(sender);
+
     if (data.size() < 1) {
         return false;
     }
@@ -88,8 +97,12 @@ bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
                 }
                 break;
             default:
-                // TODO: ignore/reset state
-                return false;
+                auto response = _output->buildPacket({sender});
+                response->put(static_cast<uint8_t>(Command::ERROR));
+                response->put(static_cast<uint8_t>(Error::UNKNOWN_COMMAND));
+                response->put(static_cast<uint8_t>(cmd));
+                response->send();
+                break;
         }
 
         if (!success) {
@@ -125,7 +138,6 @@ bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
 }
 
 bool Uploader::processReadFile(int sender, std::span<const uint8_t> data) {
-    // TODO: check if file is open for writing
     auto begin = data.begin();
     std::string filename(begin, data.end());
 
@@ -150,29 +162,27 @@ bool Uploader::processReadFile(int sender, std::span<const uint8_t> data) {
         }
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(prefix));
-        size_t sent = response->put(std::span(buff.data(), read));
-        (void)sent;
+        response->put(std::span(buff.data(), read));
         response->send();
     }
     return true;
 }
 
 bool Uploader::processWriteFile(int sender, std::span<const uint8_t> data) {
-    // TODO: check if file is available for writing
     auto filenameEnd = std::find(data.begin(), data.end(), '\0');
     if (filenameEnd == data.end()) {
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
         response->put(static_cast<uint8_t>(Error::INVALID_FILENAME));
-
         response->send();
         return false;
     }
+
     std::string filename(data.begin(), filenameEnd);
     auto begin = ++filenameEnd;
     _state = State::WAITING_FOR_DATA;
-    // TODO: delete file
-    _file = std::fstream(filename, std::ios::out | std::ios::binary);
+
+    _file = std::fstream(filename, std::ios::out | std::ios::binary | std::ios::trunc);
     if (!_file.is_open()) {
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
@@ -204,11 +214,20 @@ bool Uploader::processWriteFile(int sender, std::span<const uint8_t> data) {
 }
 
 bool Uploader::processDeleteFile(int sender, std::span<const uint8_t> data) {
-    // TODO: check if file is available for writing
     auto begin = data.begin();
     std::string filename(begin, data.end());
 
-    if (!std::filesystem::is_directory(filename) && std::filesystem::remove(filename)) {
+    bool success;
+
+    try {
+        success = !std::filesystem::is_directory(filename) && std::filesystem::remove(filename);
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        Logger::error(std::string("Failed to delete file: ") + e.what());
+        success = false;
+    }
+
+    if (success) {
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::OK));
         response->send();
@@ -224,12 +243,20 @@ bool Uploader::processDeleteFile(int sender, std::span<const uint8_t> data) {
 }
 
 bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
-    // TODO: check if dir is available for reading
     auto begin = data.begin();
     std::string filename(begin, data.end());
 
     std::filesystem::path path(filename);
-    if (!std::filesystem::is_directory(path)) {
+    bool isDir;
+    try {
+        isDir = std::filesystem::is_directory(path);
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        Logger::error(std::string("Failed to list directory: ") + e.what());
+        isDir = false;
+    }
+
+    if (!isDir) {
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::NOT_FOUND));
         response->send();
@@ -242,7 +269,7 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
     //     files.push_back(entry.path().filename().string());
     //     dataSize += files.back().size() + 1;
     // }
-    // TODO: check std::filesystem::directory_iterator
+    // XXX: std::filesystem::directory_iterator not working on esp-idf
     auto result = listDir(path);
 
     if (!result) {
@@ -275,11 +302,20 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
 }
 
 bool Uploader::processCreateDir(int sender, std::span<const uint8_t> data) {
-    // TODO: check if dir exists
     auto begin = data.begin();
     std::string filename(begin, data.end());
 
-    if (std::filesystem::create_directory(filename)) {
+    bool success;
+
+    try {
+        success = std::filesystem::create_directory(filename);
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        Logger::error(std::string("Failed to create directory: ") + e.what());
+        success = false;
+    }
+
+    if (success) {
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::OK));
         response->send();
@@ -295,11 +331,21 @@ bool Uploader::processCreateDir(int sender, std::span<const uint8_t> data) {
 }
 
 bool Uploader::processDeleteDir(int sender, std::span<const uint8_t> data) {
-    // TODO: check if is available for writing
     auto begin = data.begin();
     std::string filename(begin, data.end());
 
-    if (deleteDir(filename)) {
+    bool success;
+
+    try {
+        success = deleteDir(filename);
+        // XXX: std::filesystem::remove_all not working on esp-idf
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        Logger::error(std::string("Failed to delete directory: ") + e.what());
+        success = false;
+    }
+
+    if (success) {
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::OK));
         response->send();
