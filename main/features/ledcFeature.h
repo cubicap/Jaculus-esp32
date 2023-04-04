@@ -53,7 +53,8 @@ class LedcFeature : public Next {
                 .intr_type = LEDC_INTR_DISABLE,
                 .timer_sel = static_cast<ledc_timer_t>(timerNum),
                 .duty = static_cast<uint32_t>(duty),
-                .hpoint = 0
+                .hpoint = 0,
+                .flags = { 0 }
             };
             esp_err_t err = ledc_channel_config(&ledc_channel);
             if (err != ESP_OK) {

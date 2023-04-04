@@ -51,13 +51,6 @@ public:
         return static_cast<gpio_num_t>(pin);
     }
 
-    static gpio_num_t getAnalogPin(int pin) {
-        if (PinConfig::ANALOG_PINS.find(pin) == PinConfig::ANALOG_PINS.end()) {
-            throw std::runtime_error("Invalid analog pin");
-        }
-        return static_cast<gpio_num_t>(pin);
-    }
-
     static gpio_num_t getInterruptPin(int pin) {
         if (PinConfig::INTERRUPT_PINS.find(pin) == PinConfig::INTERRUPT_PINS.end()) {
             throw std::runtime_error("Invalid interrupt pin");
@@ -65,6 +58,7 @@ public:
         return static_cast<gpio_num_t>(pin);
     }
 
+private:
     class Gpio {
         class InterruptQueue {
             using ArrayType = std::array<std::shared_ptr<std::function<void()>>, 32>;
@@ -276,6 +270,8 @@ public:
             }
         }
     };
+
+public:
     Gpio gpio;
 
     void initialize() {

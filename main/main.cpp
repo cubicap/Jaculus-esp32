@@ -14,6 +14,7 @@
 #include "features/linkIoFeature.h"
 #include "features/freeRTOSEventQueue.h"
 #include "features/ledcFeature.h"
+#include "features/adcFeature.h"
 
 #include <jac/link/mux.h>
 #include <jac/link/mux.h>
@@ -46,6 +47,7 @@ using Machine =
     YieldFeature<
     WdtResetFeature<
     NeopixelFeature<
+    AdcFeature<
     LedcFeature<
     GpioFeature<
     EventLoopFeature<
@@ -57,7 +59,7 @@ using Machine =
     BasicStreamFeature<
     FreeRTOSEventQueueFeature<
     jac::MachineBase
->>>>>>>>>>>>>>>;
+>>>>>>>>>>>>>>>>;
 
 Controller<Machine> controller([]() { // get memory stats
     std::stringstream oss;
