@@ -43,6 +43,7 @@ template<class Next>
 class GpioFeature : public Next {
     using PinConfig = Next::PlatformInfo::PinConfig;
 
+public:
     static gpio_num_t getDigitalPin(int pin) {
         if (PinConfig::DIGITAL_PINS.find(pin) == PinConfig::DIGITAL_PINS.end()) {
             throw std::runtime_error("Invalid digital pin");
@@ -63,15 +64,15 @@ class GpioFeature : public Next {
         }
         return static_cast<gpio_num_t>(pin);
     }
-public:
 
     class Gpio {
         class InterruptQueue {
-            std::array<std::shared_ptr<std::function<void()>>, 32> queue;
-            std::array<std::shared_ptr<std::function<void()>>, 32>::iterator head = queue.begin();
-            std::array<std::shared_ptr<std::function<void()>>, 32>::iterator tail = queue.begin();
+            using ArrayType = std::array<std::shared_ptr<std::function<void()>>, 32>;
+            ArrayType queue;
+            ArrayType::iterator head = queue.begin();
+            ArrayType::iterator tail = queue.begin();
 
-            auto next(std::array<std::shared_ptr<std::function<void()>>, 32>::iterator it) {
+            auto next(ArrayType::iterator it) {
                 it++;
                 return it == queue.end() ? queue.begin() : it;
             }
