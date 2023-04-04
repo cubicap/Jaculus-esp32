@@ -243,7 +243,7 @@ void Controller<Machine>::processStatus(int sender) {
     response->put(static_cast<uint8_t>(_machineRunning));
 
     if (_machine) {
-        response->put(_machine->eventLoop_getExitCode());
+        response->put(_machine->getExitCode());
     }
     else {
         response->put(static_cast<uint8_t>(0));
@@ -329,7 +329,7 @@ bool Controller<Machine>::startMachine(std::string path) {
         self._machine->initialize();
         try {
             self._machine->evalFile(path);
-            self._machine->eventLoop_run();
+            self._machine->runEventLoop();
         }
         catch (jac::Exception& e) {
             std::string message = "Uncaught " + std::string(e.what()) + "\n" + e.stackTrace();
@@ -347,7 +347,7 @@ bool Controller<Machine>::startMachine(std::string path) {
         }
 
         {
-            std::string message = "Machine exited with code " + std::to_string(self._machine->eventLoop_getExitCode()) + "\n";
+            std::string message = "Machine exited with code " + std::to_string(self._machine->getExitCode()) + "\n";
             this->_machineIO.err->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
         }
 
@@ -363,7 +363,7 @@ bool Controller<Machine>::stopMachine() {
         return false;
     }
 
-    _machine->eventLoop_exit();
+    _machine->kill();
 
     if (_machineThread.joinable()) {
         _machineThread.join();
