@@ -2,7 +2,7 @@
 
 #include <jac/machine/machine.h>
 #include <set>
-#include <map>
+#include <unordered_map>
 #include <string>
 
 #include "hal/adc_types.h"
@@ -17,7 +17,7 @@ public:
 
         struct PinConfig {
             static inline const std::set<int> DIGITAL_PINS = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 38, 45, 46, 47, 48 };
-            static inline const std::map<int, std::pair<int, int>> ANALOG_PINS = {
+            static inline const std::unordered_map<int, std::pair<int, int>> ANALOG_PINS = {
                 { 1, { 1, ADC1_GPIO1_CHANNEL } },
                 { 2, { 1, ADC1_GPIO2_CHANNEL } },
                 { 3, { 1, ADC1_GPIO3_CHANNEL } },

@@ -4,7 +4,7 @@
 #include <jac/machine/machine.h>
 #include <jac/machine/values.h>
 #include <jac/machine/functionFactory.h>
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <set>
 #include "driver/gpio.h"
@@ -129,7 +129,7 @@ private:
             }
         };
 
-        std::map<int, std::unique_ptr<Interrupts>> _interruptCallbacks;
+        std::unordered_map<int, std::unique_ptr<Interrupts>> _interruptCallbacks;
         GpioFeature* _feature;
     public:
         Gpio(GpioFeature* feature) : _feature(feature) {}
