@@ -10,6 +10,7 @@ class TimeoutLock {
     bool _locked = false;
     int _owner = 0;
     std::mutex _mutex;
+    int _stops = 0;
 public:
     TimeoutLock(std::chrono::milliseconds duration) : _timeout(duration) {}
 
@@ -41,14 +42,29 @@ public:
         return false;
     }
 
-    void reset(int who) {
+    void resetTimeout(int who) {
         std::lock_guard<std::mutex> _(_mutex);
 
         if (!_locked || _owner != who) {
             return;
         }
 
-        _timeout.reset();
+        _stops = _stops > 0 ? _stops - 1 : 0;
+
+        if (_stops == 0) {
+            _timeout.reset();
+        }
+    }
+
+    void stopTimeout(int who) {
+        std::lock_guard<std::mutex> _(_mutex);
+
+        if (!_locked || _owner != who) {
+            return;
+        }
+
+        _timeout.stop();
+        _stops++;
     }
 
     bool unlock(int who) {
@@ -58,7 +74,7 @@ public:
             return false;
         }
 
-        _timeout.cancel();
+        _timeout.stop();
         _locked = false;
         return true;
     }
@@ -66,7 +82,7 @@ public:
     void forceUnlock() {
         std::lock_guard<std::mutex> _(_mutex);
 
-        _timeout.cancel();
+        _timeout.stop();
         _locked = false;
     }
 
@@ -76,6 +92,6 @@ public:
     }
 
     ~TimeoutLock() {
-        _timeout.cancel();
+        _timeout.stop();
     }
 };

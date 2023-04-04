@@ -78,8 +78,18 @@ public:
 
         _thread = std::thread([this]() {
             while (!_stop) {
-                auto [sender, data] = this->_input->get();
+                int sender;
+                std::vector<uint8_t> data;
+                try {
+                    std::tie(sender, data) = _input->get();
+                }
+                catch (const std::exception& e) {
+                    continue;
+                }
+
+                _controllerLock.stopTimeout(sender);  // does nothing if not locked by sender
                 processPacket(sender, std::span<const uint8_t>(data.begin(), data.end()));
+                _controllerLock.resetTimeout(sender);  // does nothing if not locked by sender
             }
         });
     }

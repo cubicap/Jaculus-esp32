@@ -71,9 +71,11 @@ bool Uploader::processPacket(int sender, std::span<const uint8_t> data) {
         return false;
     }
 
-    _controllerLock.reset(sender);
-
     if (data.size() < 1) {
+        auto response = _output->buildPacket({sender});
+        response->put(static_cast<uint8_t>(Command::ERROR));
+        response->put(static_cast<uint8_t>(Error::UNKNOWN_COMMAND));
+        response->send();
         return false;
     }
     auto begin = data.begin();

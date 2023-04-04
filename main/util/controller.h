@@ -115,7 +115,9 @@ public:
                 catch (const std::exception& e) {
                     continue;
                 }
+                _lock.stopTimeout(sender);  // does nothing if not locked by sender
                 processPacket(sender, data);
+                _lock.resetTimeout(sender);  // does nothing if not locked by sender
             }
         });
     }
@@ -168,8 +170,6 @@ void Controller<Machine>::processPacket(int sender, std::span<const uint8_t> dat
     auto begin = data.begin();
     Command cmd = static_cast<Command>(data[0]);
     begin++;
-
-    _lock.reset(sender);
 
     switch (cmd) {
         case Command::LOCK:

@@ -56,7 +56,7 @@ public:
         _running = true;
     }
 
-    void cancel() {
+    void stop() {
         std::lock_guard<std::mutex> lock(_mutex);
         _running = false;
         _cv.notify_all();
