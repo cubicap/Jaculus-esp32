@@ -259,6 +259,16 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
     }
 
     if (!isDir) {
+        if (std::filesystem::exists(path)) {
+            std::string name = path.filename().string();
+            auto response = _output->buildPacket({sender});
+            response->put(static_cast<uint8_t>(Command::LAST_DATA));
+            response->put(static_cast<uint8_t>('f'));
+            response->put(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(name.data()), name.size()));
+            response->put(static_cast<uint8_t>('\0'));
+            response->send();
+            return true;
+        }
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::NOT_FOUND));
         response->send();
@@ -283,6 +293,7 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
     }
 
     std::tie(files, dataSize) = *result;
+    dataSize += files.size();  // for the type byte
 
     auto it = files.begin();
     Command prefix = Command::HAS_MORE_DATA;
@@ -293,9 +304,18 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(prefix));
         while (it != files.end() && it->size() + 1 <= response->space()) {
+            char type = 'f';
+            try {
+                type = std::filesystem::is_directory(path / *it) ? 'd' : 'f';
+            }
+            catch (const std::filesystem::filesystem_error& e) {
+                Logger::error(std::string("Failed to check file type: ") + e.what());
+                type = 'f';
+            }
+            response->put(static_cast<uint8_t>(type));
             response->put(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(it->data()), it->size()));
             response->put(static_cast<uint8_t>('\0'));
-            dataSize -= it->size() + 1;
+            dataSize -= it->size() + 2;
             ++it;
         }
         response->send();
