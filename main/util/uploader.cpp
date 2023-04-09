@@ -245,8 +245,26 @@ bool Uploader::processDeleteFile(int sender, std::span<const uint8_t> data) {
 }
 
 bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
-    auto begin = data.begin();
-    std::string filename(begin, data.end());
+    auto dataIt = std::find(data.begin(), data.end(), '\0');
+    std::string filename(data.begin(), dataIt);
+
+    struct {
+        bool directory = false;
+        bool size = false;
+    } flags;
+
+    for (dataIt++; dataIt < data.end(); dataIt++) {
+        switch (*dataIt) {
+            case 'd':
+                flags.directory = true;
+                break;
+            case 's':
+                flags.size = true;
+                break;
+            default:
+                break;
+        }
+    }
 
     std::filesystem::path path(filename);
     bool isDir;
@@ -255,15 +273,19 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
     }
     catch (const std::filesystem::filesystem_error& e) {
         Logger::error(std::string("Failed to list directory: ") + e.what());
-        isDir = false;
+        auto response = _output->buildPacket({sender});
+        response->put(static_cast<uint8_t>(Command::ERROR));
+        response->put(static_cast<uint8_t>(Error::DIR_OPEN_FAILED));
+        response->send();
+        return false;
     }
 
-    if (!isDir) {
+    if (flags.directory || !isDir) {
         if (std::filesystem::exists(path)) {
             std::string name = path.filename().string();
             auto response = _output->buildPacket({sender});
             response->put(static_cast<uint8_t>(Command::LAST_DATA));
-            response->put(static_cast<uint8_t>('f'));
+            response->put(static_cast<uint8_t>(isDir ? 'd' : 'f'));
             response->put(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(name.data()), name.size()));
             response->put(static_cast<uint8_t>('\0'));
             response->send();
@@ -285,6 +307,7 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
     auto result = listDir(path);
 
     if (!result) {
+        Logger::error(std::string("Failed to list directory"));
         auto response = _output->buildPacket({sender});
         response->put(static_cast<uint8_t>(Command::ERROR));
         response->put(static_cast<uint8_t>(Error::DIR_OPEN_FAILED));
@@ -293,7 +316,7 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
     }
 
     std::tie(files, dataSize) = *result;
-    dataSize += files.size();  // for the type byte
+    dataSize += files.size() * 5;  // for the type byte and size
 
     auto it = files.begin();
     Command prefix = Command::HAS_MORE_DATA;
@@ -305,17 +328,27 @@ bool Uploader::processListDir(int sender, std::span<const uint8_t> data) {
         response->put(static_cast<uint8_t>(prefix));
         while (it != files.end() && it->size() + 1 <= response->space()) {
             char type = 'f';
+            uint32_t size = 0;
             try {
                 type = std::filesystem::is_directory(path / *it) ? 'd' : 'f';
             }
             catch (const std::filesystem::filesystem_error& e) {
                 Logger::error(std::string("Failed to check file type: ") + e.what());
-                type = 'f';
             }
+            try {
+                size = (flags.size && type == 'f') ? std::filesystem::file_size(path / *it) : 0;
+            }
+            catch (const std::filesystem::filesystem_error& e) {
+                Logger::error(std::string("Failed to get file size: ") + e.what());
+            }
+
             response->put(static_cast<uint8_t>(type));
             response->put(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(it->data()), it->size()));
             response->put(static_cast<uint8_t>('\0'));
-            dataSize -= it->size() + 2;
+            for (int i = 3; i >= 0; i--) {
+                response->put(static_cast<uint8_t>((size & (uint32_t(0xff) << (i * 8))) >> (i * 8)));
+            }
+            dataSize -= it->size() + 6;
             ++it;
         }
         response->send();
