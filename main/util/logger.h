@@ -3,6 +3,10 @@
 #include <jac/link/communicator.h>
 #include <string>
 
+
+namespace jac {
+
+
 struct Logger {
     static std::unique_ptr<OutputStreamCommunicator> _errorStream;
     static void error(std::string message) {
@@ -28,3 +32,6 @@ struct Logger {
         _debugStream->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(message.c_str()), message.size()));
     }
 };
+
+
+} // namespace jac

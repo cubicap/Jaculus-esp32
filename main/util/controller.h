@@ -16,6 +16,9 @@
 #include "esp_pthread.h"
 
 
+namespace jac {
+
+
 template<class Machine>
 class Controller {
     Router _router;
@@ -107,14 +110,12 @@ public:
 
         _controllerThread = std::thread([this]() {
             while (!_controllerStop) {
-                int sender;
-                std::vector<uint8_t> data;
-                try {
-                    std::tie(sender, data) = _ctrlInput->get();
-                }
-                catch (const std::exception& e) {
+                auto res = _ctrlInput->get();
+                if (!res) {
                     continue;
                 }
+                auto [sender, data] = *res;
+
                 _lock.stopTimeout(sender);  // does nothing if not locked by sender
                 processPacket(sender, data);
                 _lock.resetTimeout(sender);  // does nothing if not locked by sender
@@ -372,3 +373,6 @@ bool Controller<Machine>::stopMachine() {
 
     return true;
 }
+
+
+} // namespace jac

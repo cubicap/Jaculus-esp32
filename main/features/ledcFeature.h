@@ -11,13 +11,16 @@
 
 template<class Next>
 class LedcFeature : public Next {
+    static constexpr size_t MIN_FREQUENCY = 60;
+    static constexpr size_t MAX_FREQUENCY = 78300;
+
     class Ledc {
         std::set<int> _usedTimers;
         std::set<int> _usedChannels;
     public:
         void configureTimer(int timerNum, int frequency) {
-            if (frequency < 1 || frequency > 5000) {
-                throw std::runtime_error("Frequency must be between 1 and 5000");
+            if (frequency < MIN_FREQUENCY || frequency > MAX_FREQUENCY) {
+                throw std::runtime_error("Frequency must be between " + std::to_string(MIN_FREQUENCY) + " and " + std::to_string(MAX_FREQUENCY));
             }
             if (_usedTimers.find(timerNum) != _usedTimers.end()) {
                 throw std::runtime_error("Timer already in use");
@@ -65,8 +68,8 @@ class LedcFeature : public Next {
         }
 
         void setFrequency(int timerNum, int frequency) {
-            if (frequency < 1 || frequency > 5000) {
-                throw std::runtime_error("Frequency must be between 1 and 5000");
+            if (frequency < MIN_FREQUENCY || frequency > MAX_FREQUENCY) {
+                throw std::runtime_error("Frequency must be between " + std::to_string(MIN_FREQUENCY) + " and " + std::to_string(MAX_FREQUENCY));
             }
             if (_usedTimers.find(timerNum) == _usedTimers.end()) {
                 throw std::runtime_error("Timer not in use");
@@ -125,7 +128,7 @@ public:
 
         jac::FunctionFactory ff(this->_context);
 
-        jac::JSModule& ledcModule = this->newModule("ledc");
+        jac::Module& ledcModule = this->newModule("ledc");
         ledcModule.addExport("configureTimer", ff.newFunction(noal::function(&Ledc::configureTimer, &ledc)));
         ledcModule.addExport("configureChannel", ff.newFunction(noal::function(&Ledc::configureChannel, &ledc)));
         ledcModule.addExport("setFrequency", ff.newFunction(noal::function(&Ledc::setFrequency, &ledc)));

@@ -6,6 +6,10 @@
 #include <condition_variable>
 #include "logger.h"
 
+
+namespace jac {
+
+
 class Timeout {
     std::function<void()> _callback;
     std::chrono::milliseconds _duration;
@@ -70,3 +74,6 @@ public:
         _thread.join();
     }
 };
+
+
+} // namespace jac

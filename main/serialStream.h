@@ -7,7 +7,7 @@
 #include "util/logger.h"
 
 
-class SerialStream : public Duplex {
+class SerialStream : public jac::Duplex {
     uart_port_t _port;
     std::function<void()> _onData;
     QueueHandle_t _eventQueue;

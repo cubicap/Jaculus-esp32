@@ -9,6 +9,9 @@
 #include <optional>
 
 
+namespace jac {
+
+
 std::optional<std::pair<std::vector<std::string>, size_t>> listDir(std::string path) {
     size_t dataSize = 0;
     std::vector<std::string> files;
@@ -414,3 +417,6 @@ bool Uploader::processDeleteDir(int sender, std::span<const uint8_t> data) {
         return false;
     }
 }
+
+
+} // namespace jac

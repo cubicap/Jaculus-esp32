@@ -57,7 +57,7 @@ public:
 
         jac::FunctionFactory ff(this->_context);
 
-        jac::JSModule& adcModule = this->newModule("adc");
+        jac::Module& adcModule = this->newModule("adc");
 
         adcModule.addExport("configure", ff.newFunction(noal::function(&Adc::configure, &adc)));
         adcModule.addExport("read", ff.newFunction(noal::function(&Adc::read, &adc)));

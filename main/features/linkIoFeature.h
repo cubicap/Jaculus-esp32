@@ -13,9 +13,9 @@ template<class Next>
 class LinkIoFeature : public Next {
 public:
     class LinkWritable : public Next::Writable {
-        OutputStreamCommunicator* comm;
+        jac::OutputStreamCommunicator* comm;
     public:
-        LinkWritable(OutputStreamCommunicator* comm): comm(std::move(comm)) {}
+        LinkWritable(jac::OutputStreamCommunicator* comm): comm(std::move(comm)) {}
 
         void write(std::string data) override {
             comm->write(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
@@ -24,7 +24,7 @@ public:
 
     class LinkReadable : public Next::Readable {
         LinkIoFeature* _machine;
-        BufferedInputStreamCommunicator* comm;
+        jac::BufferedInputStreamCommunicator* comm;
         std::thread _thread;
         std::atomic<bool> _running = false;
 
@@ -42,7 +42,7 @@ public:
             return true;
         }
     public:
-        LinkReadable(LinkIoFeature* machine, BufferedInputStreamCommunicator* comm): _machine(machine), comm(std::move(comm)) {}
+        LinkReadable(LinkIoFeature* machine, jac::BufferedInputStreamCommunicator* comm): _machine(machine), comm(std::move(comm)) {}
         LinkReadable(LinkReadable&) = delete;
         LinkReadable(LinkReadable&&) = delete;
 

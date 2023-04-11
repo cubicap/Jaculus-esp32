@@ -13,6 +13,9 @@
 #include "esp_pthread.h"
 
 
+namespace jac {
+
+
 class Uploader {
 public:
     enum class Command : uint8_t {
@@ -78,14 +81,11 @@ public:
 
         _thread = std::thread([this]() {
             while (!_stop) {
-                int sender;
-                std::vector<uint8_t> data;
-                try {
-                    std::tie(sender, data) = _input->get();
-                }
-                catch (const std::exception& e) {
+                auto res = _input->get();
+                if (!res) {
                     continue;
                 }
+                auto [sender, data] = *res;
 
                 _controllerLock.stopTimeout(sender);  // does nothing if not locked by sender
                 processPacket(sender, std::span<const uint8_t>(data.begin(), data.end()));
@@ -108,3 +108,6 @@ public:
         }
     }
 };
+
+
+} // namespace jac

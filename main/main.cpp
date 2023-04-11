@@ -61,7 +61,7 @@ using Machine =
     jac::MachineBase
 >>>>>>>>>>>>>>>>;
 
-Controller<Machine> controller([]() { // get memory stats
+jac::Controller<Machine> controller([]() { // get memory stats
     std::stringstream oss;
     oss << esp_get_free_heap_size() << "/" << esp_get_minimum_free_heap_size();
     return oss.str();
@@ -73,7 +73,7 @@ Controller<Machine> controller([]() { // get memory stats
     return "not implemented";
 });
 
-using Mux_t = Mux<CobsPacketizer, CobsSerializer, SerialStream>;
+using Mux_t = jac::Mux<jac::CobsPacketizer, jac::CobsSerializer>;
 std::unique_ptr<Mux_t> mux;
 
 int main() {
@@ -95,21 +95,21 @@ int main() {
             mux->receive();
         }
         catch (std::exception &e) {
-            Logger::log(std::string("Exception: ") + e.what());
+            jac::Logger::log(std::string("Exception: ") + e.what());
         }
         catch (...) {
-            Logger::log("Unknown exception");
+            jac::Logger::log("Unknown exception");
         }
     });
 
     mux = std::make_unique<Mux_t>(std::move(serialStream));
-    mux->setErrorHandler([](Mux<CobsPacketizer, CobsSerializer, SerialStream>::Error error, std::vector<int> ctx) {
+    mux->setErrorHandler([](Mux_t::Error error, std::vector<int> ctx) {
         std::string message = "Mux error: " + std::to_string(static_cast<int>(error)) + ", ctx: [";
         for (auto c : ctx) {
             message += std::to_string(c) + ", ";
         }
         message += "]";
-        Logger::log(message);
+        jac::Logger::log(message);
     });
     auto handle = controller.router().subscribeTx(1, *mux);
     mux->bindRx(std::make_unique<decltype(handle)>(std::move(handle)));

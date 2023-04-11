@@ -5,6 +5,9 @@
 #include "timeout.h"
 
 
+namespace jac {
+
+
 class TimeoutLock {
     Timeout _timeout;
     bool _locked = false;
@@ -95,3 +98,6 @@ public:
         _timeout.stop();
     }
 };
+
+
+} // namespace jac
