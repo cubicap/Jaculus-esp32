@@ -1,0 +1,29 @@
+name: ESP-IDF
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        target: [esp32, esp32s3]
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Select configuration
+      run: cp sdkconfig-${{matrix.target}} sdkconfig
+
+    - name: esp-idf build
+      uses: espressif/esp-idf-ci-action@v1
+      with:
+        esp_idf_version: v5.0
+        target: ${{matrix.target}}
+        path: '.'
