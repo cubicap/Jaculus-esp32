@@ -61,17 +61,21 @@ using Machine =
     jac::MachineBase
 >>>>>>>>>>>>>>>>;
 
-jac::Device<Machine> device([]() { // get memory stats
-    std::stringstream oss;
-    oss << esp_get_free_heap_size() << "/" << esp_get_minimum_free_heap_size();
-    return oss.str();
-}, []() { // get storage stats
-    // std::stringstream oss;
-    // auto stats = std::filesystem::space("/data");
-    // oss << "Storage usage: \n  " << stats.available << "/" << stats.capacity << "\n";
-    // return oss.str();
-    return "not implemented";
-});
+jac::Device<Machine> device(
+    "/data",
+    []() { // get memory stats
+        std::stringstream oss;
+        oss << esp_get_free_heap_size() << "/" << esp_get_minimum_free_heap_size();
+        return oss.str();
+    },
+    []() { // get storage stats
+        // std::stringstream oss;
+        // auto stats = std::filesystem::space("/data");
+        // oss << "Storage usage: \n  " << stats.available << "/" << stats.capacity << "\n";
+        // return oss.str();
+        return "not implemented";
+    }
+);
 
 using Mux_t = jac::Mux<jac::CobsPacketizer, jac::CobsSerializer>;
 std::unique_ptr<Mux_t> muxSerial;
@@ -135,9 +139,7 @@ int main() {
 
     device.start();
 
-    if (std::filesystem::exists("/data/index.js")) {
-        device.startMachine("/data/index.js");
-    }
+    device.startMachine("index.js");
 }
 
 
