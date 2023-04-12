@@ -2,7 +2,6 @@
 #include <jac/machine/values.h>
 #include <jac/features/eventLoopFeature.h>
 #include <jac/features/timersFeature.h>
-#include <jac/features/yieldFeature.h>
 #include <jac/features/moduleLoaderFeature.h>
 #include <jac/features/filesystemFeature.h>
 #include <jac/features/basicStreamFeature.h>
@@ -15,7 +14,6 @@
 #include <jac/link/mux.h>
 #include <jac/link/encoders/cobs.h>
 
-#include "espFeatures/wdtResetFeature.h"
 #include "espFeatures/neopixelFeature.h"
 #include "espFeatures/gpioFeature.h"
 #include "espFeatures/freeRTOSEventQueue.h"
@@ -44,8 +42,6 @@
 using Machine =
     EventLoopTerminal<
     TimersFeature<
-    YieldFeature<
-    WdtResetFeature<
     NeopixelFeature<
     AdcFeature<
     LedcFeature<
@@ -59,7 +55,7 @@ using Machine =
     BasicStreamFeature<
     FreeRTOSEventQueueFeature<
     jac::MachineBase
->>>>>>>>>>>>>>>>;
+>>>>>>>>>>>>>>;
 
 jac::Device<Machine> device(
     "/data",
