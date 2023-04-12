@@ -1624,10 +1624,6 @@ CONFIG_WPA_MBEDTLS_TLS_CLIENT=y
 # end of Supplicant
 
 #
-# Jaculus
-#
-
-#
 # QuickJS
 #
 # CONFIG_QUICKJS_ENABLE_BIGNUM_EXT is not set

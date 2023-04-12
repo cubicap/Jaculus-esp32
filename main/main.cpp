@@ -1,4 +1,5 @@
 #include <jac/machine/machine.h>
+#include <jac/machine/values.h>
 #include <jac/features/eventLoopFeature.h>
 #include <jac/features/timersFeature.h>
 #include <jac/features/yieldFeature.h>
@@ -6,20 +7,22 @@
 #include <jac/features/filesystemFeature.h>
 #include <jac/features/basicStreamFeature.h>
 #include <jac/features/stdioFeature.h>
-#include <jac/machine/values.h>
 
-#include "features/wdtResetFeature.h"
-#include "features/neopixelFeature.h"
-#include "features/gpioFeature.h"
-#include "features/linkIoFeature.h"
-#include "features/freeRTOSEventQueue.h"
-#include "features/ledcFeature.h"
-#include "features/adcFeature.h"
+#include <jac/device/device.h>
+#include <jac/device/logger.h>
+#include <jac/features/linkIoFeature.h>
 
-#include <jac/link/mux.h>
 #include <jac/link/mux.h>
 #include <jac/link/encoders/cobs.h>
-#include "serialStream.h"
+
+#include "espFeatures/wdtResetFeature.h"
+#include "espFeatures/neopixelFeature.h"
+#include "espFeatures/gpioFeature.h"
+#include "espFeatures/freeRTOSEventQueue.h"
+#include "espFeatures/ledcFeature.h"
+#include "espFeatures/adcFeature.h"
+
+#include "util/serialStream.h"
 
 #include <string>
 #include <filesystem>
@@ -28,10 +31,7 @@
 #include "esp_vfs_fat.h"
 #include "freertos/task.h"
 
-
-#include "util/controller.h"
-#include "util/uploader.h"
-#include "util/logger.h"
+#include "esp_pthread.h"
 
 
 #if defined(CONFIG_IDF_TARGET_ESP32)
@@ -61,7 +61,7 @@ using Machine =
     jac::MachineBase
 >>>>>>>>>>>>>>>>;
 
-jac::Controller<Machine> controller([]() { // get memory stats
+jac::Device<Machine> device([]() { // get memory stats
     std::stringstream oss;
     oss << esp_get_free_heap_size() << "/" << esp_get_minimum_free_heap_size();
     return oss.str();
@@ -74,7 +74,7 @@ jac::Controller<Machine> controller([]() { // get memory stats
 });
 
 using Mux_t = jac::Mux<jac::CobsPacketizer, jac::CobsSerializer>;
-std::unique_ptr<Mux_t> mux;
+std::unique_ptr<Mux_t> muxSerial;
 
 int main() {
     // Initialize vfs
@@ -92,7 +92,7 @@ int main() {
     auto serialStream = std::make_unique<SerialStream>(UART_NUM_0, 921600, 4096, 0);
     serialStream->onData([]() noexcept {
         try {
-            mux->receive();
+            muxSerial->receive();
         }
         catch (std::exception &e) {
             jac::Logger::log(std::string("Exception: ") + e.what());
@@ -102,8 +102,8 @@ int main() {
         }
     });
 
-    mux = std::make_unique<Mux_t>(std::move(serialStream));
-    mux->setErrorHandler([](Mux_t::Error error, std::vector<int> ctx) {
+    muxSerial = std::make_unique<Mux_t>(std::move(serialStream));
+    muxSerial->setErrorHandler([](Mux_t::Error error, std::vector<int> ctx) {
         std::string message = "Mux error: " + std::to_string(static_cast<int>(error)) + ", ctx: [";
         for (auto c : ctx) {
             message += std::to_string(c) + ", ";
@@ -111,20 +111,32 @@ int main() {
         message += "]";
         jac::Logger::log(message);
     });
-    auto handle = controller.router().subscribeTx(1, *mux);
-    mux->bindRx(std::make_unique<decltype(handle)>(std::move(handle)));
+    auto handle = device.router().subscribeTx(1, *muxSerial);
+    muxSerial->bindRx(std::make_unique<decltype(handle)>(std::move(handle)));
 
 
-    controller.onConfigureMachine([&](Machine &machine) {
-        controller.machineIO().in->clear();
+    device.onConfigureMachine([&](Machine &machine) {
+        device.machineIO().in->clear();
 
-        machine.stdio.out = std::make_unique<Machine::LinkWritable>(controller.machineIO().out.get());
-        machine.stdio.err = std::make_unique<Machine::LinkWritable>(controller.machineIO().err.get());
-        machine.stdio.in = std::make_unique<Machine::LinkReadable>(&machine, controller.machineIO().in.get());
+        machine.stdio.out = std::make_unique<Machine::LinkWritable>(device.machineIO().out.get());
+        machine.stdio.err = std::make_unique<Machine::LinkWritable>(device.machineIO().err.get());
+        machine.stdio.in = std::make_unique<Machine::LinkReadable>(&machine, device.machineIO().in.get());
+
+        esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+        cfg.stack_size = 2 * 1024;
+        cfg.inherit_cfg = true;
+        esp_pthread_set_cfg(&cfg);
     });
 
+    esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+    cfg.stack_size = 8 * 1024;
+    cfg.inherit_cfg = true;
+    esp_pthread_set_cfg(&cfg);
+
+    device.start();
+
     if (std::filesystem::exists("/data/index.js")) {
-        controller.startMachine("/data/index.js");
+        device.startMachine("/data/index.js");
     }
 }
 

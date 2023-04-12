@@ -1,10 +1,10 @@
 #pragma once
 
 #include <jac/link/stream.h>
+#include <jac/device/logger.h>
+
 #include <atomic>
 #include "driver/uart.h"
-
-#include "util/logger.h"
 
 
 class SerialStream : public jac::Duplex {

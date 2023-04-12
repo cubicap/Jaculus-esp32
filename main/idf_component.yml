@@ -1,10 +1,6 @@
 dependencies:
   idf: ">=5.0"
-  jac-machine:
+  jac-device:
     path: src
-    git: https://github.com/cubicap/Jaculus-machine.git
-    version: 32ace99e72a9f7f55ac5b94be05f9ac3527dd9af
-  jac-link:
-    path: src
-    git: https://github.com/cubicap/Jaculus-link.git
-    version: d8eb1377a177db2649d422a7c696f186ccc719f1
+    git: https://github.com/cubicap/Jaculus-device-core.git
+    version: 4773d99c6d806c967b00c0f1ee105e3bae9b433a
