@@ -94,13 +94,14 @@ int main() {
         try {
             muxSerial->receive();
         }
-        catch (std::exception &e) {
+        catch (std::exception& e) {
             jac::Logger::log(std::string("Exception: ") + e.what());
         }
         catch (...) {
             jac::Logger::log("Unknown exception");
         }
     });
+    serialStream->start();
 
     muxSerial = std::make_unique<Mux_t>(std::move(serialStream));
     muxSerial->setErrorHandler([](Mux_t::Error error, std::vector<int> ctx) {

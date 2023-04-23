@@ -30,7 +30,13 @@ public:
         ESP_ERROR_CHECK(uart_driver_install(uartNum, rxBufferSize, txBufferSize, 10, &_eventQueue, 0));
         ESP_ERROR_CHECK(uart_param_config(uartNum, &uart_config));
         ESP_ERROR_CHECK(uart_set_pin(uartNum, txPin, rxPin, rtsPin, ctsPin));
+    }
+    SerialStream(SerialStream&&) = delete;
+    SerialStream(const SerialStream&) = delete;
+    SerialStream& operator=(SerialStream&&) = delete;
+    SerialStream& operator=(const SerialStream&) = delete;
 
+    void start() {
         _eventThread = std::thread([this]() noexcept {
             uart_event_t event;
             while (!_stopThread) {
@@ -48,10 +54,6 @@ public:
             }
         });
     }
-    SerialStream(SerialStream&&) = delete;
-    SerialStream(const SerialStream&) = delete;
-    SerialStream& operator=(SerialStream&&) = delete;
-    SerialStream& operator=(const SerialStream&) = delete;
 
     bool put(uint8_t c) override {
         return uart_write_bytes(_port, (const char*)&c, 1) == 1;
