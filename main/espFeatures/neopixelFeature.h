@@ -21,7 +21,7 @@ struct jac::ConvTraits<Rgb> {
 
     static Rgb from(ContextRef ctx, ValueWeak val) {
         auto obj = val.to<Object>();
-        return Rgb(obj.get("r").to<int>(), obj.get("g").to<int>(), obj.get("b").to<int>());
+        return Rgb(obj.get<int>("r"), obj.get<int>("g"), obj.get<int>("b"));
     }
 };
 
