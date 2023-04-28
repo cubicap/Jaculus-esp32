@@ -286,13 +286,13 @@ public:
 
         gpio_install_isr_service(0);
 
-        jac::FunctionFactory ff(this->_context);
+        jac::FunctionFactory ff(this->context());
         auto& module = this->newModule("gpio");
         module.addExport("pinMode", ff.newFunction(noal::function(&Gpio::pinMode, &gpio)));
         module.addExport("read", ff.newFunction(noal::function(&Gpio::read, &gpio)));
         module.addExport("write", ff.newFunction(noal::function(&Gpio::write, &gpio)));
 
-        jac::Object pinModeEnum = jac::Object::create(this->_context);
+        jac::Object pinModeEnum = jac::Object::create(this->context());
         pinModeEnum.set("DISABLE", static_cast<int>(PinMode::DISABLE));
         pinModeEnum.set("OUTPUT", static_cast<int>(PinMode::OUTPUT));
         pinModeEnum.set("INPUT", static_cast<int>(PinMode::INPUT));

@@ -126,7 +126,7 @@ public:
     void initialize() {
         Next::initialize();
 
-        jac::FunctionFactory ff(this->_context);
+        jac::FunctionFactory ff(this->context());
 
         jac::Module& ledcModule = this->newModule("ledc");
         ledcModule.addExport("configureTimer", ff.newFunction(noal::function(&Ledc::configureTimer, &ledc)));

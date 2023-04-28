@@ -55,7 +55,7 @@ public:
     void initialize() {
         Next::initialize();
 
-        jac::FunctionFactory ff(this->_context);
+        jac::FunctionFactory ff(this->context());
 
         jac::Module& adcModule = this->newModule("adc");
 

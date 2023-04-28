@@ -34,9 +34,11 @@ public:
     void initialize() {
         Next::initialize();
 
-        jac::Object platformInfo = jac::Object::create(this->_context);
-        platformInfo.set("name", PlatformInfo::NAME);
+        jac::ContextRef ctx = this->context();
 
-        this->registerGlobal("PlatformInfo", platformInfo);
+        jac::Object platformInfo = jac::Object::create(ctx);
+        platformInfo.defineProperty("name", jac::Value::from(ctx, PlatformInfo::NAME), jac::PropFlags::Enumerable);
+
+        ctx.getGlobalObject().defineProperty("PlatformInfo", platformInfo, jac::PropFlags::Enumerable);
     }
 };

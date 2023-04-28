@@ -3,4 +3,4 @@ dependencies:
   jac-device:
     path: src
     git: https://github.com/cubicap/Jaculus-device-core.git
-    version: ebeb68069d02c0f8e1436bf35a86ed68364e33f5
+    version: v0.0.2

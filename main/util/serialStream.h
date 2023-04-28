@@ -79,9 +79,7 @@ public:
         return uart_wait_tx_done(_port, portMAX_DELAY) == ESP_OK;
     }
 
-    template<typename Func>
-    void onData(Func callback) {
-        static_assert(noexcept(callback()));
+    void onData(std::function<void(void)> callback) override {
         _onData = callback;
     }
 

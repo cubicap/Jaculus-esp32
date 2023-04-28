@@ -58,21 +58,21 @@ class NeopixelFeature : public Next {
         static void addProperties(JSContext* ctx, jac::Object proto) {
             jac::FunctionFactory ff(ctx);
 
-            addProp(ctx, proto, "show", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue) {
+            proto.defineProperty("show", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue) {
                 SmartLed& led = *getOpaque(ctx, thisValue);
                 led.wait();
                 led.show();
-            }));
+            }), jac::PropFlags::Enumerable);
 
-            addProp(ctx, proto, "set", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue, int idx, Rgb color) {
+            proto.defineProperty("set", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue, int idx, Rgb color) {
                 SmartLed& strip = *getOpaque(ctx, thisValue);
                 strip[idx] = color;
-            }));
+            }), jac::PropFlags::Enumerable);
 
-            addProp(ctx, proto, "get", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue, int idx) {
+            proto.defineProperty("get", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue, int idx) {
                 SmartLed& strip = *getOpaque(ctx, thisValue);
                 return strip[idx];
-            }));
+            }), jac::PropFlags::Enumerable);
         }
     };
 public:
@@ -86,7 +86,7 @@ public:
         Next::initialize();
 
         auto& mod = this->newModule("neopixel");
-        jac::Function ctor = NeopixelClass::getConstructor(this->_context);
+        jac::Function ctor = NeopixelClass::getConstructor(this->context());
         mod.addExport("Neopixel", ctor);
     }
 };

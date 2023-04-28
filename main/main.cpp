@@ -73,8 +73,36 @@ jac::Device<Machine> device(
     }
 );
 
-using Mux_t = jac::Mux<jac::CobsPacketizer, jac::CobsSerializer>;
+using Mux_t = jac::Mux<jac::CobsEncoder>;
 std::unique_ptr<Mux_t> muxSerial;
+
+void reportMuxError(Mux_t::Error error, std::any ctx) {
+    std::string message = "Mux error: ";
+    switch (error) {
+        case Mux_t::Error::INVALID_RECEIVE:
+            {
+                auto& ref = std::any_cast<std::tuple<int, uint8_t>&>(ctx);
+                message += "INVALID_RECEIVE " + std::to_string(std::get<0>(ref));
+                message += " [" + std::to_string(std::get<1>(ref)) + "]";
+                jac::Logger::debug(message);
+            }
+            break;
+        case Mux_t::Error::PACKETIZER:
+            {
+                auto& ref = std::any_cast<int&>(ctx);
+                message += "PACKETIZER_ERROR " + std::to_string(ref);
+                jac::Logger::debug(message);
+            }
+            break;
+        case Mux_t::Error::PROCESSING:
+            {
+                auto& ref = std::any_cast<std::string&>(ctx);
+                message += "PROCESSING_ERROR '" + ref + "'";
+                jac::Logger::error(message);
+            }
+            break;
+    }
+}
 
 int main() {
     // Initialize vfs
@@ -88,30 +116,12 @@ int main() {
     static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
     ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl("/data", "storage", &conf, &s_wl_handle));
 
-
+    // initialize serial connection
     auto serialStream = std::make_unique<SerialStream>(UART_NUM_0, 921600, 4096, 0);
-    serialStream->onData([]() noexcept {
-        try {
-            muxSerial->receive();
-        }
-        catch (std::exception& e) {
-            jac::Logger::log(std::string("Exception: ") + e.what());
-        }
-        catch (...) {
-            jac::Logger::log("Unknown exception");
-        }
-    });
     serialStream->start();
 
     muxSerial = std::make_unique<Mux_t>(std::move(serialStream));
-    muxSerial->setErrorHandler([](Mux_t::Error error, std::vector<int> ctx) {
-        std::string message = "Mux error: " + std::to_string(static_cast<int>(error)) + ", ctx: [";
-        for (auto c : ctx) {
-            message += std::to_string(c) + ", ";
-        }
-        message += "]";
-        jac::Logger::log(message);
-    });
+    muxSerial->setErrorHandler(reportMuxError);
     auto handle = device.router().subscribeTx(1, *muxSerial);
     muxSerial->bindRx(std::make_unique<decltype(handle)>(std::move(handle)));
 
