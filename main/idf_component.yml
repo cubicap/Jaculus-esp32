@@ -2,5 +2,5 @@ dependencies:
   idf: ">=5.0"
   jac-device:
     path: src
-    git: https://github.com/cubicap/Jaculus-device-core.git
-    version: v0.0.2
+    git: https://github.com/cubicap/Jaculus-dcore.git
+    version: v0.0.3

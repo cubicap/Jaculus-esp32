@@ -41,14 +41,11 @@ public:
             uart_event_t event;
             while (!_stopThread) {
                 if (xQueueReceive(_eventQueue, &event, portMAX_DELAY) == pdTRUE) {
-                    switch (event.type) {
-                        case UART_DATA:
-                            if (_onData) {
-                                _onData();
-                            }
-                            break;
-                        default:
-                            break;
+                    if (event.type != UART_DATA) {
+                        continue;
+                    }
+                    if (_onData) {
+                        _onData();
                     }
                 }
             }
@@ -56,11 +53,11 @@ public:
     }
 
     bool put(uint8_t c) override {
-        return uart_write_bytes(_port, (const char*)&c, 1) == 1;
+        return uart_write_bytes(_port, reinterpret_cast<const char*>(&c), 1) == 1;
     }
 
     size_t write(std::span<const uint8_t> data) override {
-        return uart_write_bytes(_port, (const char*)data.data(), data.size());
+        return uart_write_bytes(_port, reinterpret_cast<const char*>(data.data()), data.size());
     }
 
     int get() override {

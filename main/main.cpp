@@ -39,23 +39,23 @@
 #endif
 
 
-using Machine =
-    EventLoopTerminal<
-    TimersFeature<
-    NeopixelFeature<
-    AdcFeature<
-    LedcFeature<
-    GpioFeature<
-    EventLoopFeature<
-    ModuleLoaderFeature<
-    FilesystemFeature<
-    PlatformInfoFeature<
-    LinkIoFeature<
-    StdioFeature<
-    BasicStreamFeature<
-    FreeRTOSEventQueueFeature<
-    jac::MachineBase
->>>>>>>>>>>>>>;
+using Machine = jac::ComposeMachine<
+    jac::MachineBase,
+    FreeRTOSEventQueueFeature,
+    jac::BasicStreamFeature,
+    jac::StdioFeature,
+    jac::LinkIoFeature,
+    PlatformInfoFeature,
+    jac::FilesystemFeature,
+    jac::ModuleLoaderFeature,
+    jac::EventLoopFeature,
+    GpioFeature,
+    LedcFeature,
+    AdcFeature,
+    NeopixelFeature,
+    jac::TimersFeature,
+    jac::EventLoopTerminal
+>;
 
 jac::Device<Machine> device(
     "/data",
@@ -70,7 +70,8 @@ jac::Device<Machine> device(
         // oss << "Storage usage: \n  " << stats.available << "/" << stats.capacity << "\n";
         // return oss.str();
         return "not implemented";
-    }
+    },
+    {{"esp32", "0.0.1"}}
 );
 
 using Mux_t = jac::Mux<jac::CobsEncoder>;

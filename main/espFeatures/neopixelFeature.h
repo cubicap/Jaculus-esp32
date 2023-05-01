@@ -1,12 +1,13 @@
 #pragma once
 
 #include <jac/machine/machine.h>
+#include <jac/machine/functionFactory.h>
+#include <jac/machine/class.h>
+
 #include <noal_func.h>
 #include <memory>
 #include <unordered_map>
 #include <SmartLeds.h>
-#include <jac/machine/functionFactory.h>
-#include <jac/machine/class.h>
 
 
 template<>
@@ -44,15 +45,8 @@ class NeopixelFeature : public Next {
         }
 
         static void destroyOpaque(JSRuntime* rt, SmartLed* ptr) noexcept {
-            if (ptr->wait(0)) {
-                delete ptr;
-                return;
-            }
-
-            std::thread([ptr]() {
-                ptr->wait();
-                delete ptr;
-            }).detach();
+            ptr->wait();
+            delete ptr;
         }
 
         static void addProperties(JSContext* ctx, jac::Object proto) {
