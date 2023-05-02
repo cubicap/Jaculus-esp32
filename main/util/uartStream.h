@@ -7,14 +7,14 @@
 #include "driver/uart.h"
 
 
-class SerialStream : public jac::Duplex {
+class UartStream : public jac::Duplex {
     uart_port_t _port;
     std::function<void()> _onData;
     QueueHandle_t _eventQueue;
     std::thread _eventThread;
     std::atomic<bool> _stopThread = false;
 public:
-    SerialStream(uart_port_t uartNum, int baudRate, int rxBufferSize, int txBufferSize,
+    UartStream(uart_port_t uartNum, int baudRate, int rxBufferSize, int txBufferSize,
                  int txPin = UART_PIN_NO_CHANGE, int rxPin = UART_PIN_NO_CHANGE,
                  int rtsPin = UART_PIN_NO_CHANGE, int ctsPin = UART_PIN_NO_CHANGE) : _port(uartNum) {
         uart_config_t uart_config = {
@@ -31,10 +31,10 @@ public:
         ESP_ERROR_CHECK(uart_param_config(uartNum, &uart_config));
         ESP_ERROR_CHECK(uart_set_pin(uartNum, txPin, rxPin, rtsPin, ctsPin));
     }
-    SerialStream(SerialStream&&) = delete;
-    SerialStream(const SerialStream&) = delete;
-    SerialStream& operator=(SerialStream&&) = delete;
-    SerialStream& operator=(const SerialStream&) = delete;
+    UartStream(UartStream&&) = delete;
+    UartStream(const UartStream&) = delete;
+    UartStream& operator=(UartStream&&) = delete;
+    UartStream& operator=(const UartStream&) = delete;
 
     void start() {
         _eventThread = std::thread([this]() noexcept {
@@ -80,7 +80,7 @@ public:
         _onData = callback;
     }
 
-    ~SerialStream() override {
+    ~UartStream() override {
         _stopThread = true;
         _eventThread.join();
         uart_driver_delete(_port);

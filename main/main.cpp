@@ -20,7 +20,7 @@
 #include "espFeatures/ledcFeature.h"
 #include "espFeatures/adcFeature.h"
 
-#include "util/serialStream.h"
+#include "util/uartStream.h"
 
 #include <string>
 #include <filesystem>
@@ -75,7 +75,11 @@ jac::Device<Machine> device(
 );
 
 using Mux_t = jac::Mux<jac::CobsEncoder>;
-std::unique_ptr<Mux_t> muxSerial;
+std::unique_ptr<Mux_t> muxUart;
+
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    std::unique_ptr<Mux_t> muxJtag;
+#endif
 
 void reportMuxError(Mux_t::Error error, std::any ctx) {
     std::string message = "Mux error: ";
@@ -117,14 +121,25 @@ int main() {
     static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
     ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl("/data", "storage", &conf, &s_wl_handle));
 
-    // initialize serial connection
-    auto serialStream = std::make_unique<SerialStream>(UART_NUM_0, 921600, 4096, 0);
-    serialStream->start();
+    // initialize uart connection
+    auto uartStream = std::make_unique<UartStream>(UART_NUM_0, 921600, 4096, 0);
+    uartStream->start();
 
-    muxSerial = std::make_unique<Mux_t>(std::move(serialStream));
-    muxSerial->setErrorHandler(reportMuxError);
-    auto handle = device.router().subscribeTx(1, *muxSerial);
-    muxSerial->bindRx(std::make_unique<decltype(handle)>(std::move(handle)));
+    muxUart = std::make_unique<Mux_t>(std::move(uartStream));
+    muxUart->setErrorHandler(reportMuxError);
+    auto handleUart = device.router().subscribeTx(1, *muxUart);
+    muxUart->bindRx(std::make_unique<decltype(handleUart)>(std::move(handleUart)));
+
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    // initialize usb connection
+    auto jtagStream = std::make_unique<JtagStream>(4096, 1024);
+    jtagStream->start();
+
+    muxJtag = std::make_unique<Mux_t>(std::move(jtagStream));
+    muxJtag->setErrorHandler(reportMuxError);
+    auto handleUsb = device.router().subscribeTx(2, *muxJtag);
+    muxJtag->bindRx(std::make_unique<decltype(handleUsb)>(std::move(handleUsb)));
+#endif
 
 
     device.onConfigureMachine([&](Machine &machine) {
