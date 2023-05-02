@@ -9,7 +9,7 @@
 
 #include <jac/device/device.h>
 #include <jac/device/logger.h>
-#include <jac/features/linkIoFeature.h>
+#include <jac/features/util/linkIo.h>
 
 #include <jac/link/mux.h>
 #include <jac/link/encoders/cobs.h>
@@ -35,6 +35,7 @@
 #if defined(CONFIG_IDF_TARGET_ESP32)
     #include "platform/esp32.h"
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
+    #include "util/jtagStream.h"
     #include "platform/esp32s3.h"
 #endif
 
@@ -44,7 +45,6 @@ using Machine = jac::ComposeMachine<
     FreeRTOSEventQueueFeature,
     jac::BasicStreamFeature,
     jac::StdioFeature,
-    jac::LinkIoFeature,
     PlatformInfoFeature,
     jac::FilesystemFeature,
     jac::ModuleLoaderFeature,
@@ -130,9 +130,9 @@ int main() {
     device.onConfigureMachine([&](Machine &machine) {
         device.machineIO().in->clear();
 
-        machine.stdio.out = std::make_unique<Machine::LinkWritable>(device.machineIO().out.get());
-        machine.stdio.err = std::make_unique<Machine::LinkWritable>(device.machineIO().err.get());
-        machine.stdio.in = std::make_unique<Machine::LinkReadable>(&machine, device.machineIO().in.get());
+        machine.stdio.out = std::make_unique<jac::LinkWritable>(device.machineIO().out.get());
+        machine.stdio.err = std::make_unique<jac::LinkWritable>(device.machineIO().err.get());
+        machine.stdio.in = std::make_unique<jac::LinkReadable<Machine>>(&machine, device.machineIO().in.get());
 
         esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
         cfg.stack_size = 2 * 1024;
