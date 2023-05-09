@@ -81,10 +81,10 @@ std::unique_ptr<Mux_t> muxUart;
     std::unique_ptr<Mux_t> muxJtag;
 #endif
 
-void reportMuxError(Mux_t::Error error, std::any ctx) {
+void reportMuxError(jac::MuxError error, std::any ctx) {
     std::string message = "Mux error: ";
     switch (error) {
-        case Mux_t::Error::INVALID_RECEIVE:
+        case jac::MuxError::INVALID_RECEIVE:
             {
                 auto& ref = std::any_cast<std::tuple<int, uint8_t>&>(ctx);
                 message += "INVALID_RECEIVE " + std::to_string(std::get<0>(ref));
@@ -92,14 +92,14 @@ void reportMuxError(Mux_t::Error error, std::any ctx) {
                 jac::Logger::debug(message);
             }
             break;
-        case Mux_t::Error::PACKETIZER:
+        case jac::MuxError::PACKETIZER:
             {
                 auto& ref = std::any_cast<int&>(ctx);
                 message += "PACKETIZER_ERROR " + std::to_string(ref);
                 jac::Logger::debug(message);
             }
             break;
-        case Mux_t::Error::PROCESSING:
+        case jac::MuxError::PROCESSING:
             {
                 auto& ref = std::any_cast<std::string&>(ctx);
                 message += "PROCESSING_ERROR '" + ref + "'";
