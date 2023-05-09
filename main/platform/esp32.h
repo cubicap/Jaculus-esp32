@@ -16,7 +16,10 @@ public:
         static inline const std::string NAME = "ESP32";
 
         struct PinConfig {
-            static inline const std::set<int> DIGITAL_PINS = { 0, 2, 4, 5, 12, 13, 14, 15, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 37, 38, 39, 16, 17 };
+            static inline const std::set<int> DIGITAL_PINS = {
+                0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22,
+                23, 25, 26, 27, 32, 33, 34, 35, 36, 37, 38, 39
+            };
             static inline const std::unordered_map<int, std::pair<int, int>> ANALOG_PINS = {
                 { 32, { 1, ADC1_GPIO32_CHANNEL } },
                 { 33, { 1, ADC1_GPIO33_CHANNEL } },
