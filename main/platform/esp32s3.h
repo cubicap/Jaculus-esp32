@@ -10,7 +10,7 @@
 
 
 template<class Next>
-class PlatformInfoFeature: public Next {
+class PlatformInfoFeature : public Next {
 public:
     struct PlatformInfo {
         static inline const std::string NAME = "ESP32-S3";
