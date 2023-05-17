@@ -1,5 +1,9 @@
 import * as ledc from "ledc";
 
+/**
+ * Example showing how to use the LEDC to control the frequency of a piezo.
+ */
+
 const PIEZO_PIN = 18;
 
 ledc.configureTimer(0, 1000);

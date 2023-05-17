@@ -1,5 +1,8 @@
 import { stdout, stdin } from "stdio";
 
+/**
+ * A class for reading standard input line by line.
+ */
 
 export class readline {
     private buffer: string = "";

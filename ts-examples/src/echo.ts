@@ -1,6 +1,10 @@
 import { stdout } from "stdio";
 import { readline } from "./readline.js";
 
+/**
+ * Example showing the use of standard input and output through the readline script.
+ */
+
 stdout.write("Input: ");
 
 let rl = new readline(true);

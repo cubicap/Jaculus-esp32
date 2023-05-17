@@ -1,5 +1,9 @@
 import * as ledc from "ledc";
 
+/**
+ * Example showing how to use the LEDC to control the brightness of an LED.
+ */
+
 const LED_PIN = 45;
 
 ledc.configureTimer(0, 1000);
