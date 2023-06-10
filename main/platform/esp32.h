@@ -31,6 +31,8 @@ public:
                 { 39, { 1, ADC1_GPIO39_CHANNEL } }
             };
             static inline const std::set<int> INTERRUPT_PINS = DIGITAL_PINS;
+            static inline const int DEFAULT_I2C_SDA_PIN = 21;
+            static inline const int DEFAULT_I2C_SCL_PIN = 22;
         };
     };
 

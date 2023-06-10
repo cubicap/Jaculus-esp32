@@ -19,6 +19,7 @@
 #include "espFeatures/freeRTOSEventQueue.h"
 #include "espFeatures/ledcFeature.h"
 #include "espFeatures/adcFeature.h"
+#include "espFeatures/i2cFeature.h"
 
 #include "util/uartStream.h"
 
@@ -52,6 +53,7 @@ using Machine = jac::ComposeMachine<
     GpioFeature,
     LedcFeature,
     AdcFeature,
+    I2CFeature,
     NeopixelFeature,
     jac::TimersFeature,
     jac::EventLoopTerminal
@@ -156,7 +158,7 @@ int main() {
     });
 
     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-    cfg.stack_size = 8 * 1024;
+    cfg.stack_size = 10 * 1024;
     cfg.inherit_cfg = true;
     esp_pthread_set_cfg(&cfg);
 
