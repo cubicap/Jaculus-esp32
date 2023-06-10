@@ -3,8 +3,9 @@ declare module "ledc" {
      * Configure the given timer.
      * @param timer The timer to configure.
      * @param frequency The frequency to configure the timer to.
+     * @param resolution The resolution to configure the timer to (default 10 bits, changes frequency range)
      */
-    function configureTimer(timer: number, frequency: number): void;
+    function configureTimer(timer: number, frequency: number, resolution?: number): void;
 
     /**
      * Configure the given LEDC channel.

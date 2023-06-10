@@ -5,22 +5,20 @@
 
 #include <stdexcept>
 #include <set>
+#include <unordered_map>
 
 #include "driver/ledc.h"
 
 
 template<class Next>
 class LedcFeature : public Next {
-    static constexpr size_t MIN_FREQUENCY = 60;
-    static constexpr size_t MAX_FREQUENCY = 78300;
-
     class Ledc {
-        std::set<int> _usedTimers;
-        std::set<int> _usedChannels;
+        std::unordered_map<int, int> _usedTimers;
+        std::unordered_map<int, int> _usedChannels;
     public:
-        void configureTimer(int timerNum, int frequency) {
-            if (frequency < MIN_FREQUENCY || frequency > MAX_FREQUENCY) {
-                throw std::runtime_error("Frequency must be between " + std::to_string(MIN_FREQUENCY) + " and " + std::to_string(MAX_FREQUENCY));
+        void configureTimer(int timerNum, int frequency, int resolution) {
+            if (resolution < 1 || resolution >= LEDC_TIMER_BIT_MAX) {
+                throw std::runtime_error("Resolution must be between 1 and " + std::to_string(LEDC_TIMER_BIT_MAX - 1));
             }
             if (_usedTimers.find(timerNum) != _usedTimers.end()) {
                 throw std::runtime_error("Timer already in use");
@@ -28,7 +26,7 @@ class LedcFeature : public Next {
 
             ledc_timer_config_t ledc_timer = {
                 .speed_mode = LEDC_LOW_SPEED_MODE,
-                .duty_resolution = LEDC_TIMER_10_BIT,
+                .duty_resolution = static_cast<ledc_timer_bit_t>(resolution),
                 .timer_num = static_cast<ledc_timer_t>(timerNum),
                 .freq_hz = static_cast<uint32_t>(frequency),
                 .clk_cfg = LEDC_AUTO_CLK
@@ -38,16 +36,22 @@ class LedcFeature : public Next {
                 throw std::runtime_error(esp_err_to_name(err));
             }
 
-            _usedTimers.insert(timerNum);
+            _usedTimers.insert({ timerNum, resolution });
         }
 
-        void configureChannel(int channelNum, int gpioNum, int timerNum, int duty = 512) {
+        void configureChannel(int channelNum, int gpioNum, int timerNum, int duty) {
+            auto timer = _usedTimers.find(timerNum);
+            if (timer == _usedTimers.end()) {
+                throw std::runtime_error("Timer not configured");
+            }
             if (duty < 0 || duty > 1023) {
                 throw std::runtime_error("Duty must be between 0 and 1023");
             }
             if (_usedChannels.find(channelNum) != _usedChannels.end()) {
                 throw std::runtime_error("Channel already in use");
             }
+
+            duty = (1 << timer->second) * duty / 1023;
 
             ledc_channel_config_t ledc_channel = {
                 .gpio_num = Next::getDigitalPin(gpioNum),
@@ -64,13 +68,10 @@ class LedcFeature : public Next {
                 throw std::runtime_error(esp_err_to_name(err));
             }
 
-            _usedChannels.insert(channelNum);
+            _usedChannels.insert({ channelNum, timerNum });
         }
 
         void setFrequency(int timerNum, int frequency) {
-            if (frequency < MIN_FREQUENCY || frequency > MAX_FREQUENCY) {
-                throw std::runtime_error("Frequency must be between " + std::to_string(MIN_FREQUENCY) + " and " + std::to_string(MAX_FREQUENCY));
-            }
             if (_usedTimers.find(timerNum) == _usedTimers.end()) {
                 throw std::runtime_error("Timer not in use");
             }
@@ -82,12 +83,16 @@ class LedcFeature : public Next {
         }
 
         void setDuty(int channelNum, int duty) {
+            auto channel = _usedChannels.find(channelNum);
+            if (channel == _usedChannels.end()) {
+                throw std::runtime_error("Channel not in use");
+            }
+            auto timer = _usedTimers.find(channel->second);
             if (duty < 0 || duty > 1023) {
                 throw std::runtime_error("Duty must be between 0 and 1023");
             }
-            if (_usedChannels.find(channelNum) == _usedChannels.end()) {
-                throw std::runtime_error("Channel not in use");
-            }
+
+            duty = (1 << timer->second) * duty / 1023;
 
             esp_err_t err = ledc_set_duty(LEDC_LOW_SPEED_MODE, static_cast<ledc_channel_t>(channelNum), duty);
             if (err != ESP_OK) {
@@ -113,10 +118,10 @@ class LedcFeature : public Next {
 
         ~Ledc() {
             for (auto channel : _usedChannels) {
-                ledc_stop(LEDC_LOW_SPEED_MODE, static_cast<ledc_channel_t>(channel), 0);
+                ledc_stop(LEDC_LOW_SPEED_MODE, static_cast<ledc_channel_t>(channel.first), 0);
             }
             for (auto timer : _usedTimers) {
-                ledc_timer_rst(LEDC_LOW_SPEED_MODE, static_cast<ledc_timer_t>(timer));
+                ledc_timer_rst(LEDC_LOW_SPEED_MODE, static_cast<ledc_timer_t>(timer.first));
             }
         }
     };
@@ -129,7 +134,19 @@ public:
         jac::FunctionFactory ff(this->context());
 
         jac::Module& ledcModule = this->newModule("ledc");
-        ledcModule.addExport("configureTimer", ff.newFunction(noal::function(&Ledc::configureTimer, &ledc)));
+        ledcModule.addExport("configureTimer", ff.newFunctionVariadic([this](std::vector<jac::ValueWeak> args) {
+            if (args.size() < 2) {
+                throw std::runtime_error("Expected at least 2 arguments");
+            }
+            int timerNum = args[0].to<int>();
+            int frequency = args[1].to<int>();
+            int resolution = 10;
+            if (args.size() == 3) {
+                resolution = args[2].to<int>();
+            }
+
+            this->ledc.configureTimer(timerNum, frequency, resolution);
+        }));
         ledcModule.addExport("configureChannel", ff.newFunction(noal::function(&Ledc::configureChannel, &ledc)));
         ledcModule.addExport("setFrequency", ff.newFunction(noal::function(&Ledc::setFrequency, &ledc)));
         ledcModule.addExport("setDuty", ff.newFunction(noal::function(&Ledc::setDuty, &ledc)));
