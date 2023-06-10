@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <SmartLeds.h>
 
+#include <set>
+
 
 template<>
 struct jac::ConvTraits<Rgb> {
@@ -29,6 +31,8 @@ struct jac::ConvTraits<Rgb> {
 
 template<class Next>
 class NeopixelFeature : public Next {
+    static inline std::set<int> _usedRmtChannels;
+
     struct NeopixelProtoBuilder : public jac::ProtoBuilder::Opaque<SmartLed>, public jac::ProtoBuilder::Properties {
         static SmartLed* constructOpaque(JSContext* ctx, std::vector<jac::ValueWeak> args) {
             if (args.size() != 2) {
@@ -41,12 +45,27 @@ class NeopixelFeature : public Next {
                 throw std::runtime_error("Invalid pin number");
             }
 
-            return new SmartLed(LED_WS2812, count, pin, 0, SingleBuffer);
+            int channel = 0;
+            while (_usedRmtChannels.find(channel) != _usedRmtChannels.end()) {
+                channel++;
+            }
+            if (channel >= 4) {
+                throw std::runtime_error("No available RMT channels");
+            }
+            _usedRmtChannels.insert(channel);
+
+            return new SmartLed(LED_WS2812, count, pin, channel, SingleBuffer);
         }
 
         static void destroyOpaque(JSRuntime* rt, SmartLed* ptr) noexcept {
+            if (!ptr) {
+                return;
+            }
+
             ptr->wait();
+            int channel = ptr->getChannel();
             delete ptr;
+            _usedRmtChannels.erase(channel);
         }
 
         static void addProperties(JSContext* ctx, jac::Object proto) {

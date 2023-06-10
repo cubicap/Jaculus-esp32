@@ -171,6 +171,8 @@ public:
     const Rgb *end() const { return _firstBuffer.get() + _count; }
     const Rgb *cend() const { return _firstBuffer.get() + _count; }
 
+    int getChannel() const { return _channel; }
+
 private:
     static IsrCore _interruptCore;
 
