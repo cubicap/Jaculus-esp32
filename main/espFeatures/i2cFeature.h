@@ -14,10 +14,10 @@
 
 template<class PlatformInfo>
 class I2C {
-    int port;
+    i2c_port_t port;
     bool open = false;
 public:
-    I2C(int port) : port(port) {}
+    I2C(int port) : port(static_cast<i2c_port_t>(port)) {}
 
     static std::optional<I2C> find(int pin) {
         return std::nullopt;
