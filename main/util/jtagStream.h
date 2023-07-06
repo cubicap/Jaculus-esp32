@@ -43,12 +43,20 @@ public:
     }
 
     bool put(uint8_t c) override {
-        auto res = usb_serial_jtag_write_bytes(&c, 1, 10) == 1;
+        if (!usb_serial_jtag_is_connected()) {
+            return true;
+        }
+
+        auto res = usb_serial_jtag_write_bytes(&c, 1, 0) == 1;
         return res;
     }
 
     size_t write(std::span<const uint8_t> data) override {
-        auto res = usb_serial_jtag_write_bytes(data.data(), data.size(), 10);
+        if (!usb_serial_jtag_is_connected()) {
+            return data.size();
+        }
+
+        auto res = usb_serial_jtag_write_bytes(data.data(), data.size(), 0);
         return res;
     }
 

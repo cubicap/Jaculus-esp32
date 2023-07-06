@@ -1,5 +1,5 @@
 dependencies:
-  idf: ">=5.0"
+  idf: ">=5.1"
   jac-device:
     path: src
     git: https://github.com/cubicap/Jaculus-dcore.git
