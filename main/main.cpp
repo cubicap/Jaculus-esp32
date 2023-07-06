@@ -40,6 +40,7 @@
     #include "platform/esp32s3.h"
 #endif
 
+wl_handle_t storage_wl_handle = WL_INVALID_HANDLE;
 
 using Machine = jac::ComposeMachine<
     jac::MachineBase,
@@ -73,7 +74,18 @@ jac::Device<Machine> device(
         // return oss.str();
         return "not implemented";
     },
-    {{"esp32", "0.0.1"}}
+    {{"esp32", "0.0.1"}}, // version info
+    [](std::filesystem::path path) { // format storage
+        jac::Logger::debug("Formatting storage");
+
+        esp_vfs_fat_spiflash_unmount("/data", storage_wl_handle);
+
+        auto* partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
+        if (partition == nullptr) {
+            return;
+        }
+        esp_partition_erase_range(partition, 0, partition->size);
+    }
 );
 
 using Mux_t = jac::Mux<jac::CobsEncoder>;
@@ -120,8 +132,7 @@ int main() {
         .disk_status_check_enable = false
     };
 
-    static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
-    ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl("/data", "storage", &conf, &s_wl_handle));
+    ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl("/data", "storage", &conf, &storage_wl_handle));
 
     // initialize uart connection
     auto uartStream = std::make_unique<UartStream>(UART_NUM_0, 921600, 4096, 0);
