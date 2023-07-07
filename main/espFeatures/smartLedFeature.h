@@ -109,6 +109,13 @@ class SmartLedFeature : public Next {
                 SmartLed& strip = *getOpaque(ctx, thisValue);
                 return strip[idx];
             }), jac::PropFlags::Enumerable);
+
+            proto.defineProperty("clear", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue) {
+                SmartLed& strip = *getOpaque(ctx, thisValue);
+                for (int i = 0; i < strip.size(); i++) {
+                    strip[i] = Rgb(0, 0, 0);
+                }
+            }), jac::PropFlags::Enumerable);
         }
     };
 public:

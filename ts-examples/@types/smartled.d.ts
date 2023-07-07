@@ -40,6 +40,11 @@ declare module "smartled" {
          * @returns The color of the LED.
          */
         public get(index: number): Rgb;
+
+        /**
+         * Clear the buffer.
+         */
+        public clear(): void;
     }
 
     const LED_WS2812: LedType;
