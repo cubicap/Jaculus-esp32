@@ -94,10 +94,14 @@ private:
         InterruptQueue _interruptQueue;
 
         class Interrupts {
+            static constexpr TickType_t DEBOUNCE_TIME = 2;
+
             std::pair<std::shared_ptr<std::function<void()>>, bool> rising;
             std::pair<std::shared_ptr<std::function<void()>>, bool> falling;
             std::pair<std::shared_ptr<std::function<void()>>, bool> change;
             gpio_num_t pin;
+            TickType_t lastTime = 0;
+            bool lastRising = false;
             GpioFeature* _feature;
 
         public:
@@ -126,6 +130,16 @@ private:
 
             GpioFeature* getFeature() const {
                 return _feature;
+            }
+
+            bool updateLast(bool risingEdge) {
+                auto now = xTaskGetTickCountFromISR();
+                if (lastRising == risingEdge && now - lastTime < DEBOUNCE_TIME) {
+                    return false;
+                }
+                lastTime = now;
+                lastRising = risingEdge;
+                return true;
             }
         };
 
@@ -189,6 +203,11 @@ private:
                         }
                     };
 
+                    bool risingEdge = gpio_get_level(callbacks.getPin()) == 1;
+                    if (!callbacks.updateLast(risingEdge)) {
+                        return;
+                    }
+
                     if (callbacks[InterruptMode::CHANGE].first) {
                         if (callbacks[InterruptMode::CHANGE].second) {
                             interruptQueue.push(callbacks[InterruptMode::CHANGE].first);
@@ -197,7 +216,7 @@ private:
                             (*callbacks[InterruptMode::CHANGE].first)();
                         }
                     }
-                    if (callbacks[InterruptMode::RISING].first && gpio_get_level(callbacks.getPin()) == 1) {
+                    if (callbacks[InterruptMode::RISING].first && risingEdge) {
                         if (callbacks[InterruptMode::RISING].second) {
                             interruptQueue.push(callbacks[InterruptMode::RISING].first);
                             feature->scheduleEventISR(call, &interruptQueue);
@@ -205,7 +224,7 @@ private:
                             (*callbacks[InterruptMode::RISING].first)();
                         }
                     }
-                    if (callbacks[InterruptMode::FALLING].first && gpio_get_level(callbacks.getPin()) == 0) {
+                    if (callbacks[InterruptMode::FALLING].first && !risingEdge) {
                         if (callbacks[InterruptMode::FALLING].second) {
                             interruptQueue.push(callbacks[InterruptMode::FALLING].first);
                             feature->scheduleEventISR(call, &interruptQueue);
