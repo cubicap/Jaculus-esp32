@@ -4,7 +4,6 @@
 #include <jac/machine/functionFactory.h>
 
 #include <stdexcept>
-#include <set>
 #include <unordered_map>
 
 #include "driver/ledc.h"
@@ -20,8 +19,8 @@ class LedcFeature : public Next {
             if (resolution < 1 || resolution >= LEDC_TIMER_BIT_MAX) {
                 throw std::runtime_error("Resolution must be between 1 and " + std::to_string(LEDC_TIMER_BIT_MAX - 1));
             }
-            if (_usedTimers.find(timerNum) != _usedTimers.end()) {
-                throw std::runtime_error("Timer already in use");
+            if (frequency < 1 || frequency > LEDC_APB_CLK_HZ) {
+                throw std::runtime_error("Frequency must be between 1 and " + std::to_string(LEDC_APB_CLK_HZ));
             }
 
             ledc_timer_config_t ledc_timer = {
@@ -47,9 +46,6 @@ class LedcFeature : public Next {
             if (duty < 0 || duty > 1023) {
                 throw std::runtime_error("Duty must be between 0 and 1023");
             }
-            if (_usedChannels.find(channelNum) != _usedChannels.end()) {
-                throw std::runtime_error("Channel already in use");
-            }
 
             duty = (1 << timer->second) * duty / 1023;
 
@@ -74,6 +70,9 @@ class LedcFeature : public Next {
         void setFrequency(int timerNum, int frequency) {
             if (_usedTimers.find(timerNum) == _usedTimers.end()) {
                 throw std::runtime_error("Timer not in use");
+            }
+            if (frequency < 1 || frequency > LEDC_APB_CLK_HZ) {
+                throw std::runtime_error("Frequency must be between 1 and " + std::to_string(LEDC_APB_CLK_HZ));
             }
 
             esp_err_t err = ledc_set_freq(LEDC_LOW_SPEED_MODE, static_cast<ledc_timer_t>(timerNum), frequency);
@@ -105,15 +104,33 @@ class LedcFeature : public Next {
             }
         }
 
-        void stop(int channelNum) {
-            if (_usedChannels.find(channelNum) == _usedChannels.end()) {
-                throw std::runtime_error("Channel not in use");
+        void stopTimer(int timerNum) {
+            bool channelInUse = false;
+            for (auto channel : _usedChannels) {
+                if (channel.second == timerNum) {
+                    channelInUse = true;
+                    break;
+                }
+            }
+            if (channelInUse) {
+                throw std::runtime_error("Timer still in use by channel");
             }
 
+            esp_err_t err = ledc_timer_rst(LEDC_LOW_SPEED_MODE, static_cast<ledc_timer_t>(timerNum));
+            if (err != ESP_OK) {
+                throw std::runtime_error(esp_err_to_name(err));
+            }
+
+            _usedTimers.erase(timerNum);
+        }
+
+        void stopChannel(int channelNum) {
             esp_err_t err = ledc_stop(LEDC_LOW_SPEED_MODE, static_cast<ledc_channel_t>(channelNum), 0);
             if (err != ESP_OK) {
                 throw std::runtime_error(esp_err_to_name(err));
             }
+
+            _usedChannels.erase(channelNum);
         }
 
         ~Ledc() {
@@ -150,5 +167,7 @@ public:
         ledcModule.addExport("configureChannel", ff.newFunction(noal::function(&Ledc::configureChannel, &ledc)));
         ledcModule.addExport("setFrequency", ff.newFunction(noal::function(&Ledc::setFrequency, &ledc)));
         ledcModule.addExport("setDuty", ff.newFunction(noal::function(&Ledc::setDuty, &ledc)));
+        ledcModule.addExport("stopTimer", ff.newFunction(noal::function(&Ledc::stopTimer, &ledc)));
+        ledcModule.addExport("stopChannel", ff.newFunction(noal::function(&Ledc::stopChannel, &ledc)));
     }
 };

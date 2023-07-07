@@ -29,4 +29,16 @@ declare module "ledc" {
      * @param duty The duty to set the channel to (0-1023).
      */
     function setDuty(channel: number, duty: number): void;
+
+    /**
+     * Stop the given timer.
+     * @param timer The timer to stop.
+     */
+    function stopTimer(timer: number): void;
+
+    /**
+     * Stop the given channel.
+     * @param channel The channel to stop.
+     */
+    function stopChannel(channel: number): void;
 }
