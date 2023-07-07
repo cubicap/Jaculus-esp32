@@ -74,7 +74,7 @@ jac::Device<Machine> device(
         // return oss.str();
         return "not implemented";
     },
-    {{"esp32", "0.0.1"}}, // version info
+    {{"esp32", JAC_ESP32_VERSION}}, // version info
     [](std::filesystem::path path) { // format storage
         jac::Logger::debug("Formatting storage");
 
