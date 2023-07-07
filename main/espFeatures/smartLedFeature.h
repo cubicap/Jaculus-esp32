@@ -29,17 +29,40 @@ struct jac::ConvTraits<Rgb> {
 };
 
 
+template<>
+struct jac::ConvTraits<LedType> {
+    static Value to(ContextRef ctx, LedType val) {
+        auto obj = Object::create(ctx);
+        obj.set<int>("T0H", val.T0H);
+        obj.set<int>("T1H", val.T1H);
+        obj.set<int>("T0L", val.T0L);
+        obj.set<int>("T1L", val.T1L);
+        obj.set<int>("TRS", val.TRS);
+        return obj;
+    }
+
+    static LedType from(ContextRef ctx, ValueWeak val) {
+        auto obj = val.to<Object>();
+        return LedType(obj.get<int>("T0H"), obj.get<int>("T1H"), obj.get<int>("T0L"), obj.get<int>("T1L"), obj.get<int>("TRS"));
+    }
+};
+
 template<class Next>
-class NeopixelFeature : public Next {
+class SmartLedFeature : public Next {
     static inline std::set<int> _usedRmtChannels;
 
-    struct NeopixelProtoBuilder : public jac::ProtoBuilder::Opaque<SmartLed>, public jac::ProtoBuilder::Properties {
+    struct SmartLedProtoBuilder : public jac::ProtoBuilder::Opaque<SmartLed>, public jac::ProtoBuilder::Properties {
         static SmartLed* constructOpaque(JSContext* ctx, std::vector<jac::ValueWeak> args) {
-            if (args.size() != 2) {
+            if (args.size() < 2) {
                 throw std::runtime_error("Invalid number of arguments");
             }
             int pin = args[0].to<int>();
             int count = args[1].to<int>();
+
+            LedType type = LED_WS2812;
+            if (args.size() > 2) {
+                type = args[2].to<LedType>();
+            }
 
             if (Next::PlatformInfo::PinConfig::DIGITAL_PINS.find(pin) == Next::PlatformInfo::PinConfig::DIGITAL_PINS.end()) {
                 throw std::runtime_error("Invalid pin number");
@@ -54,7 +77,7 @@ class NeopixelFeature : public Next {
             }
             _usedRmtChannels.insert(channel);
 
-            return new SmartLed(LED_WS2812, count, pin, channel, SingleBuffer);
+            return new SmartLed(type, count, pin, channel, SingleBuffer);
         }
 
         static void destroyOpaque(JSRuntime* rt, SmartLed* ptr) noexcept {
@@ -89,17 +112,22 @@ class NeopixelFeature : public Next {
         }
     };
 public:
-    using NeopixelClass = jac::Class<NeopixelProtoBuilder>;
+    using SmartLedClass = jac::Class<SmartLedProtoBuilder>;
 
-    NeopixelFeature() {
-        NeopixelClass::init("Neopixel");
+    SmartLedFeature() {
+        SmartLedClass::init("SmartLed");
     }
 
     void initialize() {
         Next::initialize();
 
-        auto& mod = this->newModule("neopixel");
-        jac::Function ctor = NeopixelClass::getConstructor(this->context());
-        mod.addExport("Neopixel", ctor);
+        jac::Module& mod = this->newModule("smartled");
+        jac::Function ctor = SmartLedClass::getConstructor(this->context());
+        mod.addExport("SmartLed", ctor);
+        mod.addExport("LED_WS2812", jac::Value::from(this->context(), LED_WS2812));
+        mod.addExport("LED_WS2812B", jac::Value::from(this->context(), LED_WS2812B));
+        mod.addExport("LED_WS2812B_2020", jac::Value::from(this->context(), LedType{ 400, 800, 850, 450, 300000 }));
+        mod.addExport("LED_WS2813", jac::Value::from(this->context(), LED_WS2813));
+        mod.addExport("LED_SK6812", jac::Value::from(this->context(), LED_SK6812));
     }
 };

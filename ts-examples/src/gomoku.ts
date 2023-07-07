@@ -1,4 +1,4 @@
-import { Neopixel, Rgb } from "neopixel";
+import { SmartLed, Rgb, LED_WS2812 } from "smartled";
 import * as gpio from "gpio";
 
 /**
@@ -37,7 +37,7 @@ for (let pin of [UP, DOWN, LEFT, RIGHT, MIDDLE]) {
     gpio.pinMode(pin, gpio.PinMode.INPUT_PULLUP);
 }
 
-let strip = new Neopixel(LED_PIN, 100);
+let strip = new SmartLed(LED_PIN, 100, LED_WS2812);
 
 interface Pos {
     x: number;

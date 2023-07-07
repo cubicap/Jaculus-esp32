@@ -14,7 +14,7 @@
 #include <jac/link/mux.h>
 #include <jac/link/encoders/cobs.h>
 
-#include "espFeatures/neopixelFeature.h"
+#include "espFeatures/smartLedFeature.h"
 #include "espFeatures/gpioFeature.h"
 #include "espFeatures/freeRTOSEventQueue.h"
 #include "espFeatures/ledcFeature.h"
@@ -55,7 +55,7 @@ using Machine = jac::ComposeMachine<
     LedcFeature,
     AdcFeature,
     I2CFeature,
-    NeopixelFeature,
+    SmartLedFeature,
     jac::TimersFeature,
     jac::EventLoopTerminal
 >;
