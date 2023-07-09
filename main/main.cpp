@@ -80,7 +80,7 @@ jac::Device<Machine> device(
     [](std::filesystem::path path) { // format storage
         jac::Logger::debug("Formatting storage");
 
-        esp_vfs_fat_spiflash_unmount("/data", storage_wl_handle);
+        esp_vfs_fat_spiflash_unmount_rw_wl("/data", storage_wl_handle);
 
         auto* partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
         if (partition == nullptr) {
