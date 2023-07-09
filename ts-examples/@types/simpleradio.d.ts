@@ -1,5 +1,6 @@
 declare module "simpleradio" {
     type PacketDataType = "number" | "string" | "keyvalue";
+
     interface PacketInfo {
         group: number;
         address: string;
@@ -57,4 +58,15 @@ declare module "simpleradio" {
      * @param callback The callback to register.
      */
     function on(type: "keyvalue", callback: (key: string, value: number, info: PacketInfo) => void): void;
+
+    /**
+     * Unregister a callback for a packet type.
+     * @param type The packet type to unregister for.
+     */
+    function off(type: PacketDataType): void;
+
+    /**
+     * Stop the radio.
+     */
+    function end(): void;
 }

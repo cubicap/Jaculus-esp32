@@ -141,6 +141,20 @@ public:
                 break;
             }
         })));
+        simpleradioModule.addExport("off", ff.newFunction(noal::function([](PacketDataType type) {
+            switch (type) {
+            case PacketDataType::Number:
+                SimpleRadio.setOnNumberCallback(nullptr);
+                break;
+            case PacketDataType::String:
+                SimpleRadio.setOnStringCallback(nullptr);
+                break;
+            case PacketDataType::KeyValue:
+                SimpleRadio.setOnKeyValueCallback(nullptr);
+                break;
+            }
+        })));
+        simpleradioModule.addExport("end", ff.newFunction(noal::function([]() { SimpleRadio.end(); })));
     }
 
     ~SimpleRadioFeature() {
