@@ -19,8 +19,8 @@ class LedcFeature : public Next {
             if (resolution < 1 || resolution >= LEDC_TIMER_BIT_MAX) {
                 throw std::runtime_error("Resolution must be between 1 and " + std::to_string(LEDC_TIMER_BIT_MAX - 1));
             }
-            if (frequency < 1 || frequency > LEDC_APB_CLK_HZ) {
-                throw std::runtime_error("Frequency must be between 1 and " + std::to_string(LEDC_APB_CLK_HZ));
+            if (frequency < 1) {
+                throw std::runtime_error("Frequency must be greater than 0");
             }
 
             ledc_timer_config_t ledc_timer = {
@@ -71,8 +71,8 @@ class LedcFeature : public Next {
             if (_usedTimers.find(timerNum) == _usedTimers.end()) {
                 throw std::runtime_error("Timer not in use");
             }
-            if (frequency < 1 || frequency > LEDC_APB_CLK_HZ) {
-                throw std::runtime_error("Frequency must be between 1 and " + std::to_string(LEDC_APB_CLK_HZ));
+            if (frequency < 1) {
+                throw std::runtime_error("Frequency must be greater than 0");
             }
 
             esp_err_t err = ledc_set_freq(LEDC_LOW_SPEED_MODE, static_cast<ledc_timer_t>(timerNum), frequency);
