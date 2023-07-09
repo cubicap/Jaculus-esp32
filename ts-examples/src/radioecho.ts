@@ -4,7 +4,7 @@ import { stdout, stderr } from "stdio";
 import { readline } from "./readline.js";
 
 /**
- * Example showing the use of standard input and output through the readline script.
+ * Example showing the use of simple radio to send and receive strings.
  */
 
 simpleradio.begin(1);
