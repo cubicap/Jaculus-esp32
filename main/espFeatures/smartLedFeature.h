@@ -102,11 +102,17 @@ class SmartLedFeature : public Next {
 
             proto.defineProperty("set", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue, int idx, Rgb color) {
                 SmartLed& strip = *getOpaque(ctx, thisValue);
+                if (idx < 0 || idx >= strip.size()) {
+                    throw std::runtime_error("Invalid index");
+                }
                 strip[idx] = color;
             }), jac::PropFlags::Enumerable);
 
             proto.defineProperty("get", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisValue, int idx) {
                 SmartLed& strip = *getOpaque(ctx, thisValue);
+                if (idx < 0 || idx >= strip.size()) {
+                    throw std::runtime_error("Invalid index");
+                }
                 return strip[idx];
             }), jac::PropFlags::Enumerable);
 
