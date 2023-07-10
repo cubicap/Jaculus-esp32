@@ -86,7 +86,7 @@ class SmartLedFeature : public Next {
             }
 
             ptr->wait();
-            int channel = ptr->getChannel();
+            int channel = ptr->channel();
             delete ptr;
             _usedRmtChannels.erase(channel);
         }
