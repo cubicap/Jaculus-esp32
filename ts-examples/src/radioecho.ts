@@ -9,6 +9,8 @@ import { readline } from "./readline.js";
 
 simpleradio.begin(1);
 
+console.log(`Current group: ${simpleradio.group()}, address: ${simpleradio.address()}`)
+
 stdout.write("Input: ");
 
 let rl = new readline(true);

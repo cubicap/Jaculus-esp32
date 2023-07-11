@@ -111,6 +111,12 @@ public:
 
         simpleradioModule.addExport("begin", ff.newFunction(noal::function([](int group) { SimpleRadio.begin(group); })));
         simpleradioModule.addExport("setGroup", ff.newFunction(noal::function([](int group) { SimpleRadio.setGroup(group); })));
+        simpleradioModule.addExport("group", ff.newFunction(noal::function([]() -> int { return SimpleRadio.group(); })));
+        simpleradioModule.addExport("address", ff.newFunction(noal::function([]() -> EspBdAddress {
+            EspBdAddress res;
+            SimpleRadio.address(res.data());
+            return res;
+        })));
         simpleradioModule.addExport("sendString", ff.newFunction(noal::function([](std::string str) { SimpleRadio.sendString(str); })));
         simpleradioModule.addExport("sendNumber", ff.newFunction(noal::function([](int num) { SimpleRadio.sendNumber(num); })));
         simpleradioModule.addExport("sendKeyValue", ff.newFunction(noal::function([](std::string key, double value) {
