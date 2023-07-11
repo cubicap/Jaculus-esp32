@@ -15,9 +15,21 @@ declare module "simpleradio" {
 
     /**
      * Set the radio group.
-     * @param group The radio group to use.
+     * @param group The radio group to use, between 0 and 15 inclusive.
      */
     function setGroup(group: number): void;
+
+    /**
+     * Get current radio group
+     * @returns ID of the current group
+     */
+    function group(): number;
+
+    /**
+     * Get the local device address.
+     * @returns the local device address. Only works after begin() is called.
+     */
+    function address(): string;
 
     /**
      * Send a string.
