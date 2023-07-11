@@ -6,7 +6,7 @@ dependencies:
     version: v0.0.8
   simple-radio:
     git: https://github.com/RoboticsBrno/Esp32-simple-radio.git
-    version: v1.1.0
+    version: v1.2.0
   SmartLeds:
     git: https://github.com/RoboticsBrno/SmartLeds.git
     version: v3.1.2
