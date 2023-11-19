@@ -3,7 +3,7 @@ import * as gpio from "gpio";
 
 /**
  * A simple Gomoku game.
- * Implemented for the Logic 1.1 with ESP32, and the Logic 2.0 prototype with ESP32-S3.
+ * Implemented for the Logic 1.1 with ESP32, and the Logic 2.0 with ESP32-S3.
  * (https://github.com/RoboticsBrno/RB3205-Logic)
  */
 
