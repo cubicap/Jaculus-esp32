@@ -42,22 +42,6 @@ struct jac::ConvTraits<PinMode> {
 template<class Next>
 class GpioFeature : public Next {
     using PinConfig = Next::PlatformInfo::PinConfig;
-
-public:
-    static gpio_num_t getDigitalPin(int pin) {
-        if (PinConfig::DIGITAL_PINS.find(pin) == PinConfig::DIGITAL_PINS.end()) {
-            throw std::runtime_error("Invalid digital pin");
-        }
-        return static_cast<gpio_num_t>(pin);
-    }
-
-    static gpio_num_t getInterruptPin(int pin) {
-        if (PinConfig::INTERRUPT_PINS.find(pin) == PinConfig::INTERRUPT_PINS.end()) {
-            throw std::runtime_error("Invalid interrupt pin");
-        }
-        return static_cast<gpio_num_t>(pin);
-    }
-
 private:
     class Gpio {
         class InterruptQueue {
@@ -149,7 +133,7 @@ private:
         Gpio(GpioFeature* feature) : _feature(feature) {}
 
         void pinMode(int pinNum, PinMode mode) {
-            gpio_num_t pin = getDigitalPin(pinNum);
+            gpio_num_t pin = Next::getDigitalPin(pinNum);
 
             switch (mode) {
             case PinMode::DISABLE:
@@ -175,17 +159,17 @@ private:
         }
 
         void write(int pinNum, int value) {
-            gpio_num_t pin = getDigitalPin(pinNum);
+            gpio_num_t pin = Next::getDigitalPin(pinNum);
             gpio_set_level(pin, value);
         }
 
         int read(int pinNum) {
-            gpio_num_t pin = getDigitalPin(pinNum);
+            gpio_num_t pin = Next::getDigitalPin(pinNum);
             return gpio_get_level(pin);
         }
 
         void attachInterrupt(int pinNum, InterruptMode mode, std::function<void()> callback, bool synchronous) {
-            gpio_num_t pin = getInterruptPin(pinNum);
+            gpio_num_t pin = Next::getInterruptPin(pinNum);
 
             if (_interruptCallbacks.find(pinNum) == _interruptCallbacks.end()) {
                 _interruptCallbacks[pinNum] = std::make_unique<Interrupts>(pin, _feature);
@@ -244,7 +228,7 @@ private:
         }
 
         void detachInterrupt(int pinNum, InterruptMode mode) {
-            gpio_num_t pin = getInterruptPin(pinNum);
+            gpio_num_t pin = Next::getInterruptPin(pinNum);
 
             if (_interruptCallbacks.find(pinNum) == _interruptCallbacks.end() || !(*_interruptCallbacks[pinNum])[mode].first) {
                 throw std::runtime_error("Interrupt not attached");
@@ -300,7 +284,7 @@ public:
             gpio.pinMode(pin, PinMode::DISABLE);
         }
         for (auto pin : PinConfig::INTERRUPT_PINS) {
-            gpio_intr_disable(getDigitalPin(pin));
+            gpio_intr_disable(Next::getDigitalPin(pin));
         }
 
         gpio_install_isr_service(0);
@@ -331,8 +315,8 @@ public:
 
     ~GpioFeature() {
         for (auto pin : PinConfig::INTERRUPT_PINS) {
-            gpio_intr_disable(getDigitalPin(pin));
-            gpio_isr_handler_remove(getDigitalPin(pin));
+            gpio_intr_disable(Next::getDigitalPin(pin));
+            gpio_isr_handler_remove(Next::getDigitalPin(pin));
         }
 
         gpio_uninstall_isr_service();
