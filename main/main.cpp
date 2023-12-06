@@ -15,7 +15,7 @@
 #include <jac/link/encoders/cobs.h>
 
 #include "espFeatures/smartLedFeature.h"
-#include "espFeatures/gpioFeature.h"
+#include "espFeatures/digitalFeature.h"
 #include "espFeatures/freeRTOSEventQueue.h"
 #include "espFeatures/ledcFeature.h"
 #include "espFeatures/adcFeature.h"
@@ -58,7 +58,7 @@ using Machine = jac::ComposeMachine<
     jac::FilesystemFeature,
     jac::ModuleLoaderFeature,
     jac::EventLoopFeature,
-    GpioFeature,
+    DigitalFeature,
     LedcFeature,
     AdcFeature,
     I2CFeature,

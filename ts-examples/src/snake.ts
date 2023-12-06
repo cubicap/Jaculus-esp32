@@ -1,5 +1,5 @@
 import { SmartLed, Rgb, LED_WS2812 } from "smartled";
-import * as gpio from "gpio";
+import { Digital } from "embedded:io/digital";
 
 /**
  * A simple Snake game.
@@ -31,12 +31,8 @@ else if (PlatformInfo.name == "ESP32-S3") {
 const FOOD_COLOR = { r: 255, g: 0, b: 0 };
 const SNAKE_COLOR = { r: 0, g: 255, b: 0 };
 
-gpio.pinMode(POWER_PIN, gpio.PinMode.OUTPUT);
-gpio.write(POWER_PIN, 1);
-
-for (let pin of [UP, DOWN, LEFT, RIGHT, MIDDLE]) {
-    gpio.pinMode(pin, gpio.PinMode.INPUT_PULLUP);
-}
+let power = new Digital({ pin: POWER_PIN, mode: Digital.Output });
+power.write(1);
 
 let strip = new SmartLed(LED_PIN, 100, LED_WS2812);
 function set(x: number, y: number, color: Rgb, brightness: number = 0.2) {
@@ -69,17 +65,40 @@ strip.show();
 
 let score = 0;
 
-gpio.on("falling", UP, () => {
-    direction = { x: 0, y: -1 };
+let up = new Digital({
+    pin: UP,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        direction = { x: 0, y: -1 };
+    }
 });
-gpio.on("falling", DOWN, () => {
-    direction = { x: 0, y: 1 };
+
+let down = new Digital({
+    pin: DOWN,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        direction = { x: 0, y: 1 };
+    }
 });
-gpio.on("falling", LEFT, () => {
-    direction = { x: -1, y: 0 };
+
+let left = new Digital({
+    pin: LEFT,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        direction = { x: -1, y: 0 };
+    }
 });
-gpio.on("falling", RIGHT, () => {
-    direction = { x: 1, y: 0 };
+
+let right = new Digital({
+    pin: RIGHT,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        direction = { x: 1, y: 0 };
+    }
 });
 
 let blinkState = true;
@@ -128,3 +147,15 @@ function step() {
 }
 
 var timer = setInterval(step, 300);
+
+
+// hack to prevent the object from being garbage collected
+// TODO: remove when fixed
+setInterval(() => {
+    up;
+    down;
+    left;
+    right;
+    power;
+    strip;
+}, 100000);

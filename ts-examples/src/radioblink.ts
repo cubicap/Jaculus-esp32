@@ -1,7 +1,7 @@
 import * as simpleradio from "simpleradio";
-import * as gpio from "gpio";
+import { Digital } from "embedded:io/digital";
 
-import { stdout, stderr } from "stdio";
+import { stdout } from "stdio";
 
 
 /**
@@ -20,35 +20,47 @@ const LED_GREEN = 17;
 const LED_YELLOW = 15;
 const LED_RED = 45;
 
-
-gpio.pinMode(BUTTON_A, gpio.PinMode.INPUT);
-gpio.pinMode(BUTTON_B, gpio.PinMode.INPUT);
-gpio.pinMode(BUTTON_C, gpio.PinMode.INPUT);
-
-gpio.pinMode(LED_GREEN, gpio.PinMode.OUTPUT);
-gpio.pinMode(LED_YELLOW, gpio.PinMode.OUTPUT);
-gpio.pinMode(LED_RED, gpio.PinMode.OUTPUT);
-
-
-gpio.on("falling", BUTTON_A, () => {
-    simpleradio.sendKeyValue("green", 1);
-});
-gpio.on("rising", BUTTON_A, () => {
-    simpleradio.sendKeyValue("green", 0);
+let ledGreen = new Digital({
+    pin: LED_GREEN,
+    mode: Digital.Output,
 });
 
-gpio.on("falling", BUTTON_B, () => {
-    simpleradio.sendKeyValue("yellow", 1);
-});
-gpio.on("rising", BUTTON_B, () => {
-    simpleradio.sendKeyValue("yellow", 0);
+let ledYellow = new Digital({
+    pin: LED_YELLOW,
+    mode: Digital.Output,
 });
 
-gpio.on("falling", BUTTON_C, () => {
-    simpleradio.sendKeyValue("red", 1);
+let ledRed = new Digital({
+    pin: LED_RED,
+    mode: Digital.Output,
 });
-gpio.on("rising", BUTTON_C, () => {
-    simpleradio.sendKeyValue("red", 0);
+
+
+let buttonA = new Digital({
+    pin: BUTTON_A,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling + Digital.Rising,
+    onReadable: ( args ) => {
+        simpleradio.sendKeyValue("green", args.edge === Digital.Falling ? 1 : 0);
+    }
+});
+
+let buttonB = new Digital({
+    pin: BUTTON_B,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling + Digital.Rising,
+    onReadable: ( args ) => {
+        simpleradio.sendKeyValue("yellow", args.edge === Digital.Falling ? 1 : 0);
+    }
+});
+
+let buttonC = new Digital({
+    pin: BUTTON_C,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling + Digital.Rising,
+    onReadable: ( args ) => {
+        simpleradio.sendKeyValue("red", args.edge === Digital.Falling ? 1 : 0);
+    }
 });
 
 
@@ -56,13 +68,22 @@ simpleradio.on("keyvalue", (key, value) => {
     stdout.write("Received key-value: " + key + "=" + value + "\n");
     switch (key) {
         case "green":
-            gpio.write(LED_GREEN, value);
+            ledGreen.write(value);
             break;
         case "yellow":
-            gpio.write(LED_YELLOW, value);
+            ledYellow.write(value);
             break;
         case "red":
-            gpio.write(LED_RED, value);
+            ledRed.write(value);
             break;
     }
 });
+
+
+// hack to prevent the object from being garbage collected
+// TODO: remove when fixed
+setInterval(() => {
+    buttonA;
+    buttonB;
+    buttonC;
+}, 100000);

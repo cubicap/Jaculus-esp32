@@ -1,4 +1,4 @@
-import * as gpio from "gpio";
+import { Digital } from "embedded:io/digital";
 
 /**
  * This example blinks an LED on pin 45.
@@ -6,11 +6,14 @@ import * as gpio from "gpio";
 
 const LED_PIN = 45;
 
-gpio.pinMode(LED_PIN, gpio.PinMode.OUTPUT);
+let led = new Digital({
+    pin: LED_PIN,
+    mode: Digital.Output,
+});
 
 let state = false;
 
 setInterval(() => {
-    gpio.write(LED_PIN, state ? 1 : 0);
+    led.write(state ? 1 : 0);
     state = !state;
 }, 1000);
