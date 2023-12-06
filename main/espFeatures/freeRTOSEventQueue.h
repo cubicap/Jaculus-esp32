@@ -7,21 +7,46 @@
 #include <optional>
 #include <variant>
 #include <tuple>
+#include <chrono>
 
 template<class Next>
 class FreeRTOSEventQueueFeature : public Next {
 public:
+    using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+
     struct Event {
+        using EvStdF = std::function<void()>*;
+        using EvFreeF = std::tuple<void(*)(void*), void*>;
+        using EvTmrStdF = std::tuple<std::function<void(TimePoint)>*, uint64_t>;
+        using EvTmrFreeF = std::tuple<void(*)(void*, TimePoint), void*, uint64_t>;
+
+
         std::variant<
             std::monostate,
-            std::function<void()>*,
-            std::tuple<void(*)(void*), void*>
+            EvStdF,
+            EvFreeF,
+            EvTmrStdF,
+            EvTmrFreeF
         > event = std::monostate();
 
         Event() : event(std::monostate()) {}
 
         Event(std::function<void()> func) : event(new std::function<void()>(std::move(func))) {}
         Event(void(*func)(void*), void* arg) : event(std::make_tuple(func, arg)) {}
+        Event(std::function<void(TimePoint)> func):
+            event(std::make_tuple(
+                new std::function<void(TimePoint)>(std::move(func)),
+                // TODO: use efficient time source, maybe add time argument?
+                std::chrono::steady_clock::now().time_since_epoch().count()
+            ))
+        {}
+        Event(void(*func)(void*, TimePoint), void* arg):
+            event(std::make_tuple(
+                func,
+                arg,
+                std::chrono::steady_clock::now().time_since_epoch().count()
+            ))
+        {}
 
         Event& operator=(const Event& other) = delete;
         Event(const Event& other) = delete;
@@ -34,27 +59,50 @@ public:
         }
 
         ~Event() {
-            if (std::holds_alternative<std::function<void()>*>(event)) {
-                delete std::get<std::function<void()>*>(event);
-            }
+            std::visit([](auto& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, EvStdF>) {
+                    delete arg;
+                }
+                else if constexpr (std::is_same_v<T, EvTmrStdF>) {
+                    delete std::get<0>(arg);
+                }
+                else {
+                    // no cleanup
+                }
+            }, event);
         }
 
         void operator()() {
-            if (std::holds_alternative<std::function<void()>*>(event)) {
-                auto func = std::get<std::function<void()>*>(event);
-                if (func) {
-                    (*func)();
+            std::visit([](auto& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, EvStdF>) {
+                    if (arg) {
+                        (*arg)();
+                    }
                 }
-            }
-            else if (std::holds_alternative<std::tuple<void(*)(void*), void*>>(event)) {
-                auto [func, arg] = std::get<std::tuple<void(*)(void*), void*>>(event);
-                if (func) {
-                    func(arg);
+                else if constexpr (std::is_same_v<T, EvFreeF>) {
+                    auto [func, a] = arg;
+                    if (func) {
+                        func(a);
+                    }
                 }
-            }
-            else {
-                // empty event
-            }
+                else if constexpr (std::is_same_v<T, EvTmrStdF>) {
+                    auto [func, time] = arg;
+                    if (func) {
+                        (*func)(std::chrono::steady_clock::time_point(std::chrono::steady_clock::duration(time)));
+                    }
+                }
+                else if constexpr (std::is_same_v<T, EvTmrFreeF>) {
+                    auto [func, a, time] = arg;
+                    if (func) {
+                        func(a, std::chrono::steady_clock::time_point(std::chrono::steady_clock::duration(time)));
+                    }
+                }
+                else {
+                    // empty event
+                }
+            }, event);
         }
 
         operator bool() const {
@@ -75,6 +123,30 @@ private:
         }
         else {
             return Event();
+        }
+    }
+
+    void _scheduleImpl(auto&&... args) {
+        Event e(std::forward<decltype(args)>(args)...);
+        auto res = xQueueSend(_eventQueue, &e, portMAX_DELAY);
+        if (res != pdPASS) {
+            // TODO: handle error
+            return;
+        }
+        e.release();
+    }
+
+    void _scheduleIsrImpl(auto&&... args) {
+        Event e(std::forward<decltype(args)>(args)...);
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        auto res = xQueueSendFromISR(_eventQueue, &e, &xHigherPriorityTaskWoken);
+        if (res != pdPASS) {
+            // TODO: handle error
+            return;
+        }
+        e.release();
+        if (xHigherPriorityTaskWoken) {
+            portYIELD_FROM_ISR();
         }
     }
 public:
@@ -100,47 +172,41 @@ public:
      * @brief Schedule an event to be run
      * @param func Function to be run
      */
-    void scheduleEvent(std::function<void()> func) {
-        Event e(std::move(func));
-        auto res = xQueueSend(_eventQueue, &e, portMAX_DELAY);
-        if (res != pdPASS) {
-            // TODO: handle error
-            return;
-        }
-        e.release();
-    }
+    void scheduleEvent(std::function<void()> func) { _scheduleImpl(std::move(func)); }
+
+    /**
+     * @brief Schedule an event to be run
+     * @param func Function to be run
+     * @param arg Argument to be passed to function
+     */
+    void scheduleEvent(void(*func)(void*), void* arg) { _scheduleImpl(func, arg); }
 
     /**
      * @brief Schedule an event to be run
      * @param func Function to be run
      */
-    void scheduleEvent(void(*func)(void*), void* arg) {
-        Event e(func, arg);
-        auto res = xQueueSend(_eventQueue, &e, portMAX_DELAY);
-        if (res != pdPASS) {
-            // TODO: handle error
-            return;
-        }
-        e.release();
-    }
+    void scheduleEvent(std::function<void(TimePoint)> func) { _scheduleImpl(std::move(func)); }
+
+    /**
+     * @brief Schedule an event to be run
+     * @param func Function to be run
+     * @param arg Argument to be passed to function
+     */
+    void scheduleEvent(void(*func)(void*, TimePoint), void* arg) { _scheduleImpl(func, arg); }
 
     /**
      * @brief Schedule an event to be run from ISR
      * @param func Function to be run
+     * @param arg Argument to be passed to function
      */
-    void scheduleEventISR(void(*func)(void*), void* arg) {
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        Event e(func, arg);
-        auto res = xQueueSendFromISR(_eventQueue, &e, &xHigherPriorityTaskWoken);
-        if (res != pdPASS) {
-            // TODO: handle error
-            return;
-        }
-        e.release();
-        if (xHigherPriorityTaskWoken) {
-            portYIELD_FROM_ISR();
-        }
-    }
+    void scheduleEventISR(void(*func)(void*), void* arg) { _scheduleIsrImpl(func, arg); }
+
+    /**
+     * @brief Schedule an event to be run from ISR
+     * @param func Function to be run
+     * @param arg Argument to be passed to function
+     */
+    void scheduleEventISR(void(*func)(void*, TimePoint), void* arg) { _scheduleIsrImpl(func, arg); }
 
     /**
      * @brief Wake up event loop if it is waiting for events
