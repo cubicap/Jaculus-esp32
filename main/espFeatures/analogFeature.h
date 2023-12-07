@@ -91,12 +91,15 @@ class AnalogFeature : public Next {
 public:
     using AnalogClass = jac::Class<AnalogProtoBuilder<AnalogFeature>>;
 
+    AnalogFeature() {
+        AnalogClass::init("Analog");
+    }
+
     void initialize() {
         Next::initialize();
 
         auto& module = this->newModule("embedded:io/analog");
 
-        AnalogClass::init("Analog");
         AnalogClass::initContext(this->context());
 
         module.addExport("Analog", AnalogClass::getConstructor(this->context()));

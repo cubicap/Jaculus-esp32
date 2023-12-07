@@ -325,6 +325,10 @@ class DigitalFeature : public Next {
 public:
     using DigitalClass = jac::Class<DigitalProtoBuilder<DigitalFeature>>;
 
+    DigitalFeature() {
+        DigitalClass::init("Digital");
+    }
+
     void initialize() {
         Next::initialize();
 
@@ -339,7 +343,6 @@ public:
 
         auto& module = this->newModule("embedded:io/digital");
 
-        DigitalClass::init("Digital");
         DigitalClass::initContext(this->context());
 
         jac::Object digitalConstructor = DigitalClass::getConstructor(this->context());
@@ -357,8 +360,6 @@ public:
         digitalConstructor.set("Rising", DigitalEdge::RISING);
         digitalConstructor.set("Falling", DigitalEdge::FALLING);
     }
-
-    DigitalFeature() {}
 
     ~DigitalFeature() {
         for (auto pin : PinConfig::INTERRUPT_PINS) {
