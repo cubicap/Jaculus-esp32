@@ -1,4 +1,4 @@
-import * as adc from "adc";
+import { Analog } from "embedded:io/analog";
 import * as ledc from "ledc";
 
 /**
@@ -11,9 +11,13 @@ const SERVO_PIN = 17;
 ledc.configureTimer(0, 50, 12);
 ledc.configureChannel(0, SERVO_PIN, 0, 1023);
 
+const adc = new Analog({
+    pin: INPUT_PIN,
+    resolution: 10
+});
 
 setInterval(() => {
-    const value = adc.read(INPUT_PIN);
+    const value = adc.read();
 
     // map the value from 0-1023 to 1-2ms
     const ms = (value / 1023) + 1;

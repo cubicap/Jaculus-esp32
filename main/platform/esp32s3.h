@@ -8,7 +8,7 @@
 
 
 struct PlatformInfo {
-    static inline constexpr std::string NAME = "ESP32-S3";
+    static inline const std::string NAME = "ESP32-S3";
 
     struct PinConfig {
         static inline const std::set<int> DIGITAL_PINS = {

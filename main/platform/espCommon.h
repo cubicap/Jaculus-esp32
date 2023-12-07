@@ -25,6 +25,15 @@ public:
         return static_cast<gpio_num_t>(pin);
     }
 
+    static std::pair<int, int> getAnalogPin(int pin) {
+        auto it = PlatformInfo::PinConfig::ANALOG_PINS.find(pin);
+        if (it == PlatformInfo::PinConfig::ANALOG_PINS.end()) {
+            throw std::runtime_error("Invalid analog pin");
+        }
+
+        return it->second;
+    }
+
     void initialize() {
         Next::initialize();
 
