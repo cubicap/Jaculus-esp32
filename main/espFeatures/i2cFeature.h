@@ -12,66 +12,100 @@
 #include "freertos/FreeRTOS.h"
 
 
-template<class PlatformInfo>
+template<class Feature>
 class I2C {
-    i2c_port_t port;
-    bool open = false;
+    i2c_port_t _port;
+    uint8_t _address;
+    bool open = true;  // the port is open upon successful construction
 public:
-    I2C(int port) : port(static_cast<i2c_port_t>(port)) {}
-
-    static std::optional<I2C> find(int pin) {
-        return std::nullopt;
-    }
-
-    std::vector<uint8_t> readFrom(uint8_t address, size_t quantity) {
-        std::vector<uint8_t> data(quantity);
-        esp_err_t err = i2c_master_read_from_device(port, address, data.data(), quantity, 100 / portTICK_PERIOD_MS);
-        if (err != ESP_OK) {
-            throw std::runtime_error(esp_err_to_name(err));
+    I2C(int sda, int scl, int bitrate, int address, int port):
+        _port(static_cast<i2c_port_t>(port)),
+        _address(static_cast<uint8_t>(address & 0x7F))  // 7-bit address
+    {
+        if (_address != address) {
+            throw std::runtime_error("Invalid I2C address");
         }
-
-        return data;
-    }
-
-    // not compatible with Espruino - takes variadic data
-    void writeTo(uint8_t address, std::vector<uint8_t> data) {
-        esp_err_t err = i2c_master_write_to_device(port, address, data.data(), data.size(), 100 / portTICK_PERIOD_MS);
-
-        if (err != ESP_OK) {
-            throw std::runtime_error(esp_err_to_name(err));
-        }
-    }
-
-    void setup(std::optional<int> scl, std::optional<int> sda, std::optional<int> bitrate) {
-        if (open) {
-            throw std::runtime_error("I2C already open");
-        }
-
-        int scl_ = scl.value_or(PlatformInfo::PinConfig::DEFAULT_I2C_SCL_PIN);
-        int sda_ = sda.value_or(PlatformInfo::PinConfig::DEFAULT_I2C_SDA_PIN);
-        int bitrate_ = bitrate.value_or(400000);
 
         i2c_config_t conf = {
             .mode = I2C_MODE_MASTER,
-            .sda_io_num = sda_,
-            .scl_io_num = scl_,
+            .sda_io_num = Feature::getDigitalPin(sda),
+            .scl_io_num = Feature::getDigitalPin(scl),
             .sda_pullup_en = GPIO_PULLUP_ENABLE,
             .scl_pullup_en = GPIO_PULLUP_ENABLE,
             .master = {
-                .clk_speed = static_cast<uint32_t>(bitrate_),
+                .clk_speed = static_cast<uint32_t>(bitrate),
             },
             .clk_flags = 0,
         };
 
-        i2c_param_config(port, &conf);
-        i2c_driver_install(port, conf.mode, 0, 0, 0);
+        esp_err_t err = i2c_param_config(_port, &conf);
+        if (err != ESP_OK) {
+            throw std::runtime_error(std::string("Error configuring I2C: ") + esp_err_to_name(err));
+        }
+
+        err = i2c_driver_install(_port, conf.mode, 0, 0, 0);
+        if (err != ESP_OK) {
+            throw std::runtime_error(std::string("Error installing I2C driver: ") + esp_err_to_name(err));
+        }
+    }
+
+    size_t readInto(std::span<uint8_t> data, bool stopBit = true) {
+        if (!open) {
+            throw std::runtime_error("I2C is closed");
+        }
+
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        i2c_master_start(cmd);
+        i2c_master_write_byte(cmd, (_address << 1) | I2C_MASTER_READ, true);
+        i2c_master_read(cmd, data.data(), data.size(), stopBit ? I2C_MASTER_LAST_NACK : I2C_MASTER_ACK);
+        i2c_master_stop(cmd);
+
+        esp_err_t err = i2c_master_cmd_begin(_port, cmd, 100 / portTICK_PERIOD_MS);
+        if (err != ESP_OK) {
+            throw std::runtime_error(std::string("Error reading from I2C: ") + esp_err_to_name(err));
+        }
+
+        i2c_cmd_link_delete(cmd);
+
+        return data.size();
+    }
+
+    std::vector<uint8_t> read(size_t quantity, bool stopBit = true) {
+        std::vector<uint8_t> data(quantity);
+        readInto(data, stopBit);
+        return data;
+    }
+
+    void write(std::span<const uint8_t> data, bool stopBit = true) {
+        if (!open) {
+            throw std::runtime_error("I2C is closed");
+        }
+
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        i2c_master_start(cmd);
+        i2c_master_write_byte(cmd, (_address << 1) | I2C_MASTER_WRITE, true);
+        i2c_master_write(cmd, data.data(), data.size(), stopBit);
+        i2c_master_stop(cmd);
+
+        esp_err_t err = i2c_master_cmd_begin(_port, cmd, 100 / portTICK_PERIOD_MS);
+        if (err != ESP_OK) {
+            throw std::runtime_error(std::string("Error writing to I2C: ") + esp_err_to_name(err));
+        }
+
+        i2c_cmd_link_delete(cmd);
     }
 
     void close() {
-        if (open) {
-            i2c_driver_delete(port);
-            open = false;
+        if (!open) {
+            return;
         }
+
+        esp_err_t err = i2c_driver_delete(_port);
+        if (err != ESP_OK) {
+            throw std::runtime_error(std::string("Error deleting I2C driver: ") + esp_err_to_name(err));
+        }
+
+        open = false;
     }
 
     ~I2C() {
@@ -79,75 +113,104 @@ public:
     }
 };
 
-template<class I2CFeature>
-struct I2CProtoBuilder : public jac::ProtoBuilder::Opaque<I2C<typename I2CFeature::PlatformInfo>>, public jac::ProtoBuilder::Properties {
-    using I2C_ = I2C<typename I2CFeature::PlatformInfo>;
+template<class Feature>
+struct I2CProtoBuilder : public jac::ProtoBuilder::Opaque<I2C<Feature>>, public jac::ProtoBuilder::Properties {
+    using I2C_ = I2C<Feature>;
+
+    static I2C_* constructOpaque(jac::ContextRef ctx, std::vector<jac::ValueWeak> args) {
+        // TODO: extend instance lifetime until close or program end
+        //       *currently not a problem, as the instance destrutor does nothing*
+        // TODO: check if pins are already in use
+
+        if (args.size() < 1) {
+            throw jac::Exception::create(jac::Exception::Type::TypeError, "Analog constructor requires an options argument");
+        }
+
+        jac::ObjectWeak options = args[0].to<jac::ObjectWeak>();
+        if (!options.hasProperty("sda")) {
+            throw jac::Exception::create(jac::Exception::Type::TypeError, "I2C constructor requires an sda pin");
+        }
+        int sda = options.get<int>("sda");
+
+        if (!options.hasProperty("scl")) {
+            throw jac::Exception::create(jac::Exception::Type::TypeError, "I2C constructor requires an scl pin");
+        }
+        int scl = options.get<int>("scl");
+
+        if (!options.hasProperty("bitrate")) {
+            throw jac::Exception::create(jac::Exception::Type::TypeError, "I2C constructor requires a bitrate");
+        }
+        int bitrate = options.get<int>("bitrate");
+
+        if (!options.hasProperty("address")) {
+            throw jac::Exception::create(jac::Exception::Type::TypeError, "I2C constructor requires an address");
+        }
+        int address = options.get<int>("address");
+
+        int port = I2C_NUM_0;
+        if (options.hasProperty("port")) {
+            port = options.get<int>("port");
+        }
+
+        return new I2C_(sda, scl, bitrate, address, port);
+    }
 
     static void addProperties(JSContext* ctx, jac::Object proto) {
         jac::FunctionFactory ff(ctx);
 
         // TODO: ugly hack
-        proto.defineProperty("readFrom", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int address, int quantity) {
+        proto.defineProperty("read", ff.newFunctionThisVariadic([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::vector<jac::ValueWeak> args) {
             auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
-            auto data = i2c.readFrom(address, quantity);
-
-            auto res = jac::ArrayBuffer::create(ctx, std::span(data.data(), data.size()));
-
-            auto& machine = *reinterpret_cast<I2CFeature*>(JS_GetContextOpaque(ctx));
-            jac::Value convertor = machine.eval("(buf) => new Uint8Array(buf)", "<I2CFeature::readFrom>");
-            return convertor.to<jac::Function>().call<jac::Value>(res);
-        }));
-
-        proto.defineProperty("writeTo", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int address, jac::Value data) {
-            auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
-            std::vector<uint8_t> dataVec;
-
-            if (JS_IsString(data.getVal())) {
-                auto str = data.toString();
-                dataVec.resize(str.size());
-                std::copy(str.begin(), str.end(), dataVec.begin());
+            auto& machine = *reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
+            if (args.size() < 1) {
+                throw jac::Exception::create(jac::Exception::Type::TypeError, "Read requires at least one argument");
             }
-            else {
-                auto& machine = *reinterpret_cast<I2CFeature*>(JS_GetContextOpaque(ctx));
-                jac::Value toArrayBuffer = machine.eval(
+
+            jac::Value checkBufferType = machine.eval(
 R"--(
 (data) => {
-    if (data instanceof ArrayBuffer) return data;
-    if (ArrayBuffer.isView(data)) return data.buffer;
-    if (typeof data === 'number') return new Int8Array([data]).buffer;
-    if (Array.isArray(data)) return new Int8Array(data).buffer;
+    if (data instanceof ArrayBuffer) return true;
+    if (typeof data === 'number') return false;
     throw new Error('Invalid data type');
 }
-)--", "<I2CFeature::writeTo>");
+)--", "<I2CFeature::read>");
 
-                auto res = toArrayBuffer.to<jac::Function>().call<jac::ArrayBuffer>(data);
-                auto dataView = res.typedView<uint8_t>();
-                dataVec.resize(dataView.size());
-                std::copy(dataView.begin(), dataView.end(), dataVec.begin());
+            bool isBuffer = checkBufferType.to<jac::Function>().call<bool>(args[0]);
+
+            bool stopBit = true;
+            if (args.size() > 1) {
+                stopBit = args[1].to<bool>();
             }
 
-            i2c.writeTo(address, std::move(dataVec));
-        }));
+            if (isBuffer) {
+                auto data = args[0].to<jac::ArrayBuffer>();
+                auto dataView = data.typedView<uint8_t>();
+                return jac::Value::from(ctx, static_cast<int>(i2c.readInto(dataView, stopBit)));
+            }
+            else {
+                int quantity = args[0].to<int>();
+                auto data = i2c.read(quantity, stopBit);
+                return jac::ArrayBuffer::create(ctx, std::span(data.data(), data.size())).template to<jac::Value>();
+            }
+        }), jac::PropFlags::Enumerable);
 
-        proto.defineProperty("setup", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, jac::Object options) {
+        proto.defineProperty("write", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::vector<jac::ValueWeak> args) {
             auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
-
-            std::optional<int> scl;
-            std::optional<int> sda;
-            std::optional<int> bitrate;
-
-            if (options.hasProperty("scl")) {
-                scl = options.get<int>("scl");
-            }
-            if (options.hasProperty("sda")) {
-                sda = options.get<int>("sda");
-            }
-            if (options.hasProperty("bitrate")) {
-                bitrate = options.get<int>("bitrate");
+            if (args.size() < 1) {
+                throw jac::Exception::create(jac::Exception::Type::TypeError, "Write requires at least one argument");
             }
 
-            i2c.setup(scl, sda, bitrate);
-        }));
+            jac::ArrayBufferWeak buffer = args[0].to<jac::ArrayBufferWeak>();
+            bool stopBit = true;
+            if (args.size() > 1) {
+                stopBit = args[1].to<bool>();
+            }
+
+            auto dataView = buffer.typedView<uint8_t>();
+            i2c.write(dataView, stopBit);
+        }), jac::PropFlags::Enumerable);
+
+        I2CProtoBuilder::template addMethodMember<void(I2C_::*)(), &I2C_::close>(ctx, proto, "close", jac::PropFlags::Enumerable);
     }
 };
 
@@ -164,9 +227,12 @@ public:
     void initialize() {
         Next::initialize();
 
-        jac::Module& mod = this->newModule("i2c");
-        for (int i = 0; i < SOC_I2C_NUM; ++i) {
-            mod.addExport("I2C" + std::to_string(i), I2CClass::createInstance(this->context(), new I2C<typename Next::PlatformInfo>(i)));
-        }
+        jac::Module& mod = this->newModule("embedded:io/i2c");
+
+        I2CClass::initContext(this->context());
+
+        jac::Object i2cConstructor = I2CClass::getConstructor(this->context());
+
+        mod.addExport("I2C", i2cConstructor);
     }
 };
