@@ -276,6 +276,10 @@ struct DigitalProtoBuilder : public jac::ProtoBuilder::Opaque<Digital<Feature>>,
         // TODO: extend instance lifetime until close or program end
         // TODO: check if pin is already in use
 
+        if (args.size() < 1) {
+            throw jac::Exception::create(jac::Exception::Type::TypeError, "Digital constructor requires an options argument");
+        }
+
         jac::ObjectWeak options = args[0].to<jac::ObjectWeak>();
 
         int pin = options.get<int>("pin");
@@ -288,8 +292,7 @@ struct DigitalProtoBuilder : public jac::ProtoBuilder::Opaque<Digital<Feature>>,
                 debounceMs = options.get<int>("debounce");
             }
 
-            return new Digital_(static_cast<Feature*>(
-                JS_GetContextOpaque(ctx)), pin, mode, interruptMode,
+            return new Digital_(static_cast<Feature*>(JS_GetContextOpaque(ctx)), pin, mode, interruptMode,
                 [ctx, callback](bool risingEdge, std::chrono::time_point<std::chrono::steady_clock> timestamp) mutable {
                     jac::Object arg = jac::Object::create(ctx);
                     arg.set("edge", risingEdge ? DigitalEdge::RISING : DigitalEdge::FALLING);
@@ -307,6 +310,8 @@ struct DigitalProtoBuilder : public jac::ProtoBuilder::Opaque<Digital<Feature>>,
     static void addProperties(jac::ContextRef ctx, jac::Object proto) {
         jac::FunctionFactory ff(ctx);
 
+        // TODO: add required properties
+
         DigitalProtoBuilder::template addMethodMember<void(Digital_::*)(bool), &Digital_::write>(ctx, proto, "write", jac::PropFlags::Enumerable);
         DigitalProtoBuilder::template addMethodMember<bool(Digital_::*)(), &Digital_::read>(ctx, proto, "read", jac::PropFlags::Enumerable);
         DigitalProtoBuilder::template addMethodMember<void(Digital_::*)(), &Digital_::close>(ctx, proto, "close", jac::PropFlags::Enumerable);
@@ -317,21 +322,21 @@ struct DigitalProtoBuilder : public jac::ProtoBuilder::Opaque<Digital<Feature>>,
 template<class Next>
 class DigitalFeature : public Next {
     using PinConfig = typename Next::PlatformInfo::PinConfig;
-    using DigitalClass = jac::Class<DigitalProtoBuilder<DigitalFeature>>;
 public:
+    using DigitalClass = jac::Class<DigitalProtoBuilder<DigitalFeature>>;
+
     void initialize() {
         Next::initialize();
 
         for (auto pin : PinConfig::DIGITAL_PINS) {
-            gpio_set_direction(this->getDigitalPin(pin), GPIO_MODE_DISABLE);
+            gpio_set_direction(Next::getDigitalPin(pin), GPIO_MODE_DISABLE);
         }
         for (auto pin : PinConfig::INTERRUPT_PINS) {
-            gpio_intr_disable(this->getDigitalPin(pin));
+            gpio_intr_disable(Next::getDigitalPin(pin));
         }
 
         gpio_install_isr_service(0);
 
-        jac::FunctionFactory ff(this->context());
         auto& module = this->newModule("embedded:io/digital");
 
         DigitalClass::init("Digital");
@@ -357,8 +362,8 @@ public:
 
     ~DigitalFeature() {
         for (auto pin : PinConfig::INTERRUPT_PINS) {
-            gpio_intr_disable(this->getDigitalPin(pin));
-            gpio_isr_handler_remove(this->getDigitalPin(pin));
+            gpio_intr_disable(Next::getDigitalPin(pin));
+            gpio_isr_handler_remove(Next::getDigitalPin(pin));
         }
 
         gpio_uninstall_isr_service();
