@@ -99,7 +99,6 @@ namespace detail {
 
         DigitalEdge _mode = DigitalEdge::DISABLE;
         bool _isAssigned = false;
-        bool _synchronous; // TODO: maybe remove asynchronous mode?
         std::function<void(bool, std::chrono::time_point<std::chrono::steady_clock>)> _callback;
 
         InterruptConf(int debounceMs = 0) : _debounceTicks(debounceMs / portTICK_PERIOD_MS) {}
@@ -123,11 +122,9 @@ namespace detail {
             return true;
         }
 
-        void setCallback(std::function<void(bool, std::chrono::time_point<std::chrono::steady_clock>)> callback,
-                         bool synchronous) {
+        void setCallback(std::function<void(bool, std::chrono::time_point<std::chrono::steady_clock>)> callback) {
             _isAssigned = false;
             _callback = callback;
-            _synchronous = synchronous;
             _isAssigned = bool(callback);
         }
     };
@@ -251,7 +248,7 @@ public:
     {
         pinMode(mode);
         enableInterrupt(interruptMode);
-        _interruptConf.setCallback(callback, true);
+        _interruptConf.setCallback(callback);
     }
 
     Digital(const Digital&) = delete;
