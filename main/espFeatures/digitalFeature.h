@@ -4,9 +4,7 @@
 #include <jac/machine/machine.h>
 #include <jac/machine/values.h>
 #include <jac/machine/functionFactory.h>
-#include <unordered_map>
-#include <memory>
-#include <set>
+
 #include "driver/gpio.h"
 
 
@@ -99,6 +97,7 @@ namespace detail {
         bool lastRising = false;
         TickType_t lastTime = 0;
 
+        DigitalEdge _mode = DigitalEdge::DISABLE;
         bool _isAssigned = false;
         bool _synchronous; // TODO: maybe remove asynchronous mode?
         std::function<void(bool, std::chrono::time_point<std::chrono::steady_clock>)> _callback;
@@ -106,12 +105,16 @@ namespace detail {
         InterruptConf(int debounceMs = 0) : _debounceTicks(debounceMs / portTICK_PERIOD_MS) {}
 
         bool updateLast(bool risingEdge) {
-            // TODO: Use more precise time source
             auto now = xTaskGetTickCountFromISR();
 
-            // two successive interrupts with the same edge within
-            // 2 ticks are probably caused by some hardware bug
-            if (lastRising == risingEdge && now - lastTime < 4) {
+            // TODO: replace naive debounce with a better solution
+            if (now - lastTime < _debounceTicks) {
+                return false;
+            }
+            if (_mode == DigitalEdge::FALLING && risingEdge) {
+                return false;
+            }
+            if (_mode == DigitalEdge::RISING && !risingEdge) {
                 return false;
             }
 
@@ -169,21 +172,22 @@ class Digital {
 
         gpio_isr_handler_add(_pin, [](void* arg) {
             auto& self = *static_cast<Digital*>(arg);
-            Feature* feature = self._feature;
+            bool risingEdge = gpio_get_level(self._pin) == 1;
 
             if (!self._interruptConf._isAssigned) {
                 return;
             }
 
-            bool risingEdge = gpio_get_level(self._pin) == 1;
             if (!self._interruptConf.updateLast(risingEdge)) {
                 return;
             }
 
             self._interruptConf.queue.push(risingEdge ? DigitalEdge::RISING : DigitalEdge::FALLING);
-            feature->scheduleEventISR(call, &self);
+            self._feature->scheduleEventISR(call, &self);
         }, this);
         gpio_intr_enable(_pin);
+
+        _interruptConf._mode = mode;
     }
 
     void disableInterrupt() {
@@ -192,6 +196,11 @@ class Digital {
             gpio_isr_handler_remove(_pin);
 
             _interruptConf._isAssigned = false;
+
+            // FIXME: callback may still be scheduled in the event queue/being executed
+            //        so the callback can't be safely destroyed (by delaying the destruction
+            //        the chance of a crash is reduced but not eliminated)
+            // _interruptConf._callback = nullptr;
         }
     }
 
@@ -235,7 +244,7 @@ public:
 
     Digital(Feature* feature, int pin, DigitalMode mode, DigitalEdge interruptMode,
             std::function<void(bool, std::chrono::time_point<std::chrono::steady_clock>)> callback,
-            int debounceMs) :
+            int debounceMs):
         _feature(feature),
         _pin(Feature::getDigitalPin(pin)),
         _interruptConf(debounceMs)
@@ -287,7 +296,7 @@ struct DigitalProtoBuilder : public jac::ProtoBuilder::Opaque<Digital<Feature>>,
         if (options.hasProperty("onReadable")) {
             jac::Function callback = options.get<jac::Function>("onReadable");
             DigitalEdge interruptMode = options.get<DigitalEdge>("edge");
-            int debounceMs = 0;
+            int debounceMs = 10;
             if (options.hasProperty("debounce")) {
                 debounceMs = options.get<int>("debounce");
             }
