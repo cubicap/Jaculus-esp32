@@ -17,7 +17,7 @@
 #include "espFeatures/smartLedFeature.h"
 #include "espFeatures/digitalFeature.h"
 #include "espFeatures/freeRTOSEventQueue.h"
-#include "espFeatures/ledcFeature.h"
+#include "espFeatures/pwmFeature.h"
 #include "espFeatures/analogFeature.h"
 #include "espFeatures/i2cFeature.h"
 #include "espFeatures/simpleRadioFeature.h"
@@ -59,7 +59,7 @@ using Machine = jac::ComposeMachine<
     jac::ModuleLoaderFeature,
     jac::EventLoopFeature,
     DigitalFeature,
-    LedcFeature,
+    PwmFeature,
     AnalogFeature,
     I2CFeature,
     SmartLedFeature,
