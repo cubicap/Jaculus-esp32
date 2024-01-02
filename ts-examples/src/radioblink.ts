@@ -78,12 +78,3 @@ simpleradio.on("keyvalue", (key, value) => {
             break;
     }
 });
-
-
-// hack to prevent the object from being garbage collected
-// TODO: remove when fixed
-setInterval(() => {
-    buttonA;
-    buttonB;
-    buttonC;
-}, 100000);

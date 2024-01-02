@@ -2,14 +2,10 @@
 
 #include <jac/machine/machine.h>
 #include <jac/machine/functionFactory.h>
-#include <jac/machine/class.h>
 
-#include <noal_func.h>
 #include <memory>
-#include <unordered_map>
 
 #include "driver/i2c.h"
-#include "freertos/FreeRTOS.h"
 
 
 template<class Feature>
@@ -114,12 +110,10 @@ public:
 };
 
 template<class Feature>
-struct I2CProtoBuilder : public jac::ProtoBuilder::Opaque<I2C<Feature>>, public jac::ProtoBuilder::Properties {
+struct I2CProtoBuilder : public jac::ProtoBuilder::Opaque<I2C<Feature>>, public jac::ProtoBuilder::Properties, public jac::ProtoBuilder::LifetimeHandles {
     using I2C_ = I2C<Feature>;
 
     static I2C_* constructOpaque(jac::ContextRef ctx, std::vector<jac::ValueWeak> args) {
-        // TODO: extend instance lifetime until close or program end
-        //       *currently not a problem, as the instance destrutor does nothing*
         // TODO: check if pins are already in use
 
         if (args.size() < 1) {
@@ -155,10 +149,15 @@ struct I2CProtoBuilder : public jac::ProtoBuilder::Opaque<I2C<Feature>>, public 
         return new I2C_(sda, scl, bitrate, address, port);
     }
 
+    static void postConstruction(jac::ContextRef ctx, jac::Object thisVal, std::vector<jac::ValueWeak> args) {
+        auto& machine = *reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
+        machine.extendLifetime(thisVal);
+    }
+
     static void addProperties(JSContext* ctx, jac::Object proto) {
         jac::FunctionFactory ff(ctx);
 
-        // TODO: ugly hack
+        // XXX: ugly hack with inline javascript
         proto.defineProperty("read", ff.newFunctionThisVariadic([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::vector<jac::ValueWeak> args) {
             auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
             auto& machine = *reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
@@ -210,7 +209,12 @@ R"--(
             i2c.write(dataView, stopBit);
         }), jac::PropFlags::Enumerable);
 
-        I2CProtoBuilder::template addMethodMember<void(I2C_::*)(), &I2C_::close>(ctx, proto, "close", jac::PropFlags::Enumerable);
+        proto.defineProperty("close", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
+            I2C_& self = *I2CProtoBuilder::getOpaque(ctx, thisVal);
+            self.close();
+            auto& machine = *reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
+            machine.releaseLifetime(thisVal);
+        }), jac::PropFlags::Enumerable);
     }
 };
 

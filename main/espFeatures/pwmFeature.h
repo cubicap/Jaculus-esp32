@@ -55,9 +55,9 @@ struct Timer {
 
 template<class Feature>
 class PWM {
-    Feature* const _feature;
 public:
     // TODO: hide these (make view const)
+    Feature* const _feature;
     gpio_num_t _pin;
     int _hz;
     int _duty;
@@ -132,11 +132,10 @@ public:
 };
 
 template<class Feature>
-struct PWMProtoBuilder : public jac::ProtoBuilder::Opaque<PWM<Feature>>, public jac::ProtoBuilder::Properties {
+struct PWMProtoBuilder : public jac::ProtoBuilder::Opaque<PWM<Feature>>, public jac::ProtoBuilder::Properties, public jac::ProtoBuilder::LifetimeHandles {
     using PWM_ = PWM<Feature>;
 
     static PWM_* constructOpaque(jac::ContextRef ctx, std::vector<jac::ValueWeak> args) {
-        // TODO: extend instance lifetime until close or program end
         // TODO: check if pin is already in use
 
         if (args.size() < 1) {
@@ -152,18 +151,28 @@ struct PWMProtoBuilder : public jac::ProtoBuilder::Opaque<PWM<Feature>>, public 
         return new PWM_(static_cast<Feature*>(JS_GetContextOpaque(ctx)), pin, hz, resolution);
     }
 
+    static void postConstruction(jac::ContextRef ctx, jac::Object thisVal, std::vector<jac::ValueWeak> args) {
+        PWM_& self = *PWMProtoBuilder::getOpaque(ctx, thisVal);
+        self._feature->extendLifetime(thisVal);
+    }
+
     static void addProperties(jac::ContextRef ctx, jac::Object proto) {
         jac::FunctionFactory ff(ctx);
 
         // TODO: add required properties
         PWMProtoBuilder::template addMethodMember<void(PWM_::*)(int), &PWM_::write>(ctx, proto, "write", jac::PropFlags::Enumerable);
-        PWMProtoBuilder::template addMethodMember<void(PWM_::*)(), &PWM_::close>(ctx, proto, "close", jac::PropFlags::Enumerable);
 
         PWMProtoBuilder::template addPropMember<int, &PWM_::_hz>(ctx, proto, "hz", jac::PropFlags::Enumerable);
 
         proto.defineProperty("timer", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
             PWM_& pwm = *PWMProtoBuilder::getOpaque(ctx, thisVal);
             return pwm._timer->num;
+        }), jac::PropFlags::Enumerable);
+
+        proto.defineProperty("close", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
+            PWM_& self = *PWMProtoBuilder::getOpaque(ctx, thisVal);
+            self.close();
+            self._feature->releaseLifetime(thisVal);
         }), jac::PropFlags::Enumerable);
     }
 };

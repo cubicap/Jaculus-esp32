@@ -5,6 +5,8 @@
 #include <jac/machine/values.h>
 #include <jac/machine/functionFactory.h>
 
+#include <array>
+
 #include "driver/gpio.h"
 
 
@@ -134,8 +136,10 @@ namespace detail {
 
 template<typename Feature>
 class Digital {
+public:
     Feature* const _feature;
     const gpio_num_t _pin;
+private:
     detail::InterruptConf _interruptConf;
 
     void enableInterrupt(DigitalEdge mode) {
@@ -275,11 +279,10 @@ public:
 };
 
 template<class Feature>
-struct DigitalProtoBuilder : public jac::ProtoBuilder::Opaque<Digital<Feature>>, public jac::ProtoBuilder::Properties {
+struct DigitalProtoBuilder : public jac::ProtoBuilder::Opaque<Digital<Feature>>, public jac::ProtoBuilder::Properties, public jac::ProtoBuilder::LifetimeHandles {
     using Digital_ = Digital<Feature>;
 
     static Digital_* constructOpaque(jac::ContextRef ctx, std::vector<jac::ValueWeak> args) {
-        // TODO: extend instance lifetime until close or program end
         // TODO: check if pin is already in use
 
         if (args.size() < 1) {
@@ -313,14 +316,22 @@ struct DigitalProtoBuilder : public jac::ProtoBuilder::Opaque<Digital<Feature>>,
         }
     }
 
+    static void postConstruction(jac::ContextRef ctx, jac::Object thisVal, std::vector<jac::ValueWeak> args) {
+        Digital_& self = *DigitalProtoBuilder::getOpaque(ctx, thisVal);
+        self._feature->extendLifetime(thisVal);
+    }
+
     static void addProperties(jac::ContextRef ctx, jac::Object proto) {
         jac::FunctionFactory ff(ctx);
 
-        // TODO: add required properties
-
         DigitalProtoBuilder::template addMethodMember<void(Digital_::*)(bool), &Digital_::write>(ctx, proto, "write", jac::PropFlags::Enumerable);
         DigitalProtoBuilder::template addMethodMember<bool(Digital_::*)(), &Digital_::read>(ctx, proto, "read", jac::PropFlags::Enumerable);
-        DigitalProtoBuilder::template addMethodMember<void(Digital_::*)(), &Digital_::close>(ctx, proto, "close", jac::PropFlags::Enumerable);
+
+        proto.defineProperty("close", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
+            Digital_& self = *DigitalProtoBuilder::getOpaque(ctx, thisVal);
+            self.close();
+            self._feature->releaseLifetime(thisVal);
+        }), jac::PropFlags::Enumerable);
     }
 };
 

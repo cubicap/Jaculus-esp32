@@ -29,5 +29,10 @@ declare module "embedded:io/i2c" {
          * @param stop Whether to send a stop bit after writing, default: true.
          */
         write(buffer: ArrayBuffer, stop?: boolean): void;
+
+        /**
+         * Closes the I2C connection.
+         */
+        close(): void;
     }
 }

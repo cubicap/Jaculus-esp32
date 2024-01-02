@@ -21,6 +21,7 @@
 #include "espFeatures/analogFeature.h"
 #include "espFeatures/i2cFeature.h"
 #include "espFeatures/simpleRadioFeature.h"
+#include "espFeatures/extendLifetimeFeature.h"
 
 #include "util/uartStream.h"
 
@@ -58,6 +59,7 @@ using Machine = jac::ComposeMachine<
     jac::FilesystemFeature,
     jac::ModuleLoaderFeature,
     jac::EventLoopFeature,
+    ExtendLifetimeFeature,
     DigitalFeature,
     PwmFeature,
     AnalogFeature,

@@ -181,16 +181,3 @@ let middle = new Digital({
         }
     }
 });
-
-
-// hack to prevent the object from being garbage collected
-// TODO: remove when fixed
-setInterval(() => {
-    up;
-    down;
-    left;
-    right;
-    middle;
-    power;
-    strip;
-}, 100000);

@@ -147,15 +147,3 @@ function step() {
 }
 
 var timer = setInterval(step, 300);
-
-
-// hack to prevent the object from being garbage collected
-// TODO: remove when fixed
-setInterval(() => {
-    up;
-    down;
-    left;
-    right;
-    power;
-    strip;
-}, 100000);
