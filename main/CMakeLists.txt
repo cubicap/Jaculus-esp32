@@ -3,7 +3,7 @@ set(JAC_ESP32_VERSION "0.0.5")
 idf_component_register(
     SRCS "main.cpp"
     INCLUDE_DIRS ""
-    REQUIRES jac-device jac-machine jac-link
+    REQUIRES jac-dcore jac-machine jac-link
              driver pthread spiffs vfs fatfs
              SmartLeds
 )
