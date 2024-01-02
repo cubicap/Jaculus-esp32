@@ -1,9 +1,9 @@
 dependencies:
   idf: ">=5.1"
-  jac-device:
+  jac-dcore:
     path: src
     git: https://github.com/cubicap/Jaculus-dcore.git
-    version: v0.0.10
+    version: v0.0.11
   simple-radio:
     git: https://github.com/RoboticsBrno/Esp32-simple-radio.git
     version: v1.2.1
