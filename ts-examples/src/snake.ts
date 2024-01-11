@@ -1,4 +1,4 @@
-import { SmartLed, Rgb, LED_WS2812 } from "smartled";
+import { SmartLed, LED_WS2812, Rgb } from "smartled";
 import { Digital } from "embedded:io/digital";
 
 /**
@@ -34,9 +34,20 @@ const SNAKE_COLOR = { r: 0, g: 255, b: 0 };
 let power = new Digital({ pin: POWER_PIN, mode: Digital.Output });
 power.write(1);
 
-let strip = new SmartLed(LED_PIN, 100, LED_WS2812);
+let strip = new SmartLed({
+    pin: LED_PIN,
+    count: 100,
+    type: LED_WS2812
+});
+
+let buffer = new ArrayBuffer(400);
+let view = new Uint32Array(buffer);
+
 function set(x: number, y: number, color: Rgb, brightness: number = 0.2) {
-    strip.set(x + y * 10, { r: color.r * brightness, g: color.g * brightness, b: color.b * brightness });
+    view[x + y * 10] =
+        (Math.floor(color.b * brightness) << 16) |
+        (Math.floor(color.r * brightness) << 8) |
+        (Math.floor(color.g * brightness));
 }
 
 let snake = [
@@ -61,7 +72,7 @@ function newFood() {
     return { x, y };
 }
 let food = newFood();
-strip.show();
+strip.send(buffer);
 
 let score = 0;
 
@@ -106,7 +117,7 @@ function blinkSnake() {
     for (let pos of snake) {
         set(pos.x, pos.y, blinkState ? SNAKE_COLOR : { r: 0, g: 0, b: 0 });
     }
-    strip.show();
+    strip.send(buffer);
     blinkState = !blinkState;
 }
 
@@ -143,7 +154,7 @@ function step() {
         set(last.x, last.y, { r: 0, g: 0, b: 0 });
     }
     set(next.x, next.y, SNAKE_COLOR);
-    strip.show();
+    strip.send(buffer);
 }
 
 var timer = setInterval(step, 300);

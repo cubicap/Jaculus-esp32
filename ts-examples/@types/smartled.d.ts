@@ -14,37 +14,22 @@ declare module "smartled" {
     }
 
     class SmartLed {
-        /**
-         * Create a new Smart LED strip.
-         * @param pin The pin the strip is connected to.
-         * @param count The number of LEDs in the strip.
-         * @param type The type of LED strip.
-         */
-        constructor(pin: number, count: number, type?: LedType);
+        constructor(options: {
+            pin: number,
+            count: number,
+            type?: LedType
+        });
 
-        /**
-         * Show the current buffer on the strip.
-         */
-        public show(): void;
+        begin(options: {
+            x: number,
+            y: number,
+            width: number,
+            height: number
+        });
 
-        /**
-         * Set the color of the given LED.
-         * @param index The index of the LED to set.
-         * @param rgb The color to set the LED to.
-         */
-        public set(index: number, rgb: Rgb): void;
+        send(data: ArrayBuffer): void;
 
-        /**
-         * Get the color of the given LED.
-         * @param index The index of the LED to get.
-         * @returns The color of the LED.
-         */
-        public get(index: number): Rgb;
-
-        /**
-         * Clear the buffer.
-         */
-        public clear(): void;
+        close(): void;
     }
 
     const LED_WS2812: LedType;

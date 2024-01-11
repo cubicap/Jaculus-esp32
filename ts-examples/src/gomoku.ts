@@ -30,8 +30,14 @@ else if (PlatformInfo.name == "ESP32-S3") {
     var MIDDLE_PIN = 9;
 }
 
+let strip = new SmartLed({
+    pin: LED_PIN,
+    count: 100,
+    type: LED_WS2812
+});
 
-let strip = new SmartLed(LED_PIN, 100, LED_WS2812);
+let buffer = new ArrayBuffer(400);
+let view = new Uint32Array(buffer);
 
 interface Pos {
     x: number;
@@ -48,9 +54,12 @@ for (let i = 0; i < 10; i++) {
     }
 }
 
-function set(x: number, y: number, color: Rgb, brightness: number = 0.1) {
+function set(x: number, y: number, color: Rgb, brightness: number = 0.2) {
     brightness /= 4;
-    strip.set(x + y * 10, { r: color.r * brightness, g: color.g * brightness, b: color.b * brightness });
+    view[x + y * 10] =
+        (Math.floor(color.b * brightness) << 16) |
+        (Math.floor(color.r * brightness) << 8) |
+        (Math.floor(color.g * brightness));
 }
 
 let colors: Rgb[] = [
@@ -60,7 +69,7 @@ let colors: Rgb[] = [
 ];
 
 set(0, 0, { r: 0, g: 255, b: 0 });
-strip.show();
+strip.send(buffer);
 
 let turnRed = true;
 
@@ -108,7 +117,7 @@ function gameEnd(pos: Pos): { color: number, direction: number[], posCount: numb
 function update(oldPos: Pos, newPos: Pos) {
     set(oldPos.x, oldPos.y, colors[matrix[oldPos.x][oldPos.y]]);
     set(newPos.x, newPos.y, { r: 0, g: 255, b: 0 });
-    strip.show();
+    strip.send(buffer);
     pos = newPos;
 }
 
@@ -177,7 +186,7 @@ let middle = new Digital({
                 right.close();
             }
             turnRed = !turnRed;
-            strip.show();
+            strip.send(buffer);
         }
     }
 });
