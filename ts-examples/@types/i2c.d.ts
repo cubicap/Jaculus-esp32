@@ -1,34 +1,38 @@
-declare module "i2c" {
-    interface I2C {
-        /**
-         * Find an I2C interface by its pin.
-         * @param pin The pin the I2C interface is connected to.
-         * @returns The I2C interface, or undefined if not found.
-         */
-        find(pin: number): I2C | undefined;
+declare module "embedded:io/i2c" {
+    class I2C {
+        constructor(options: {
+            data: number,
+            clock: number,
+            hz: number,
+            address: number,
+            port?: number
+        });
 
         /**
-         * Read from the given address.
-         * @param address The address to read from.
-         * @param quantity The number of bytes to read.
-         * @returns The bytes read.
+         * Reads data from the I2C bus.
+         * @param buffer The buffer to read data into.
+         * @param stop Whether to send a stop bit after reading, default: true.
          */
-        readFrom(address: number, quantity: number): Uint8Array;
+        read(buffer: ArrayBuffer, stop?: boolean): number;
 
         /**
-         * Write to the given address.
-         * @param address The address to write to.
-         * @param buffer The data to write.
+         * Reads data from the I2C bus.
+         * @param byteLength The number of bytes to read.
+         * @param stop Whether to send a stop bit after reading, default: true.
+         * @returns The data read from the bus.
          */
-        writeTo(address: number, buffer: ArrayBuffer | Uint8Array | number[] | string | number): void;
+        read(byteLength: number, stop?: boolean): ArrayBuffer;
 
         /**
-         * Setup the I2C interface.
-         * @param options The options to use when setting up the I2C interface.
+         * Writes data to the I2C bus.
+         * @param buffer The buffer to write data from.
+         * @param stop Whether to send a stop bit after writing, default: true.
          */
-        setup(options: { scl?: number, sda?: number, bitrate?: number }): void;
+        write(buffer: ArrayBuffer, stop?: boolean): void;
+
+        /**
+         * Closes the I2C connection.
+         */
+        close(): void;
     }
-
-    const I2C1: I2C;
-    const I2C2: I2C | undefined;
 }

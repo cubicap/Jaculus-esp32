@@ -1,4 +1,4 @@
-import * as ledc from "ledc";
+import { PWM } from "embedded:io/pwm";
 
 /**
  * Example showing how to use the LEDC to control the brightness of an LED.
@@ -6,8 +6,11 @@ import * as ledc from "ledc";
 
 const LED_PIN = 45;
 
-ledc.configureTimer(0, 1000);
-ledc.configureChannel(0, LED_PIN, 0, 1023);
+const ledPWM = new PWM({
+    pin: LED_PIN,
+    hz: 1000,
+    resolution: 10
+});
 
 let duty = 0;
 let step = 10;
@@ -24,5 +27,5 @@ setInterval(() => {
         duty = 0;
         step *= -1;
     }
-    ledc.setDuty(0, Math.pow(duty, power) / Math.pow(1023, power - 1));
+    ledPWM.write(Math.pow(duty, power) / Math.pow(1023, power - 1));
 }, 10);

@@ -1,4 +1,4 @@
-import { SmartLed } from "smartled";
+import { LED_WS2812B, SmartLed } from "smartled";
 
 /**
  * This example blinks using a smart LED on pin 48.
@@ -6,18 +6,26 @@ import { SmartLed } from "smartled";
 
 const LED_PIN = 48;
 
-let strip = new SmartLed(LED_PIN, 1);
+let strip = new SmartLed({
+    pin: LED_PIN,
+    count: 1,
+    type: LED_WS2812B
+});
+
+let buffer = new ArrayBuffer(4);
+let view = new Uint32Array(buffer);
 
 let state = false;
 
 setInterval(() => {
     if (state) {
-        strip.set(0, { r: 0, g: 0, b: 0 });
+        view[0] = 0x000000;
     }
     else {
-        strip.set(0, { r: 20, g: 0, b: 0 });
+        // BRG
+        view[0] = 0x002000;
     }
-    strip.show();
+    strip.send(buffer);
 
     state = !state;
 }, 1000);

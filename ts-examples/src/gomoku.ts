@@ -1,5 +1,5 @@
 import { SmartLed, Rgb, LED_WS2812 } from "smartled";
-import * as gpio from "gpio";
+import { Digital } from "embedded:io/digital";
 
 /**
  * A simple Gomoku game.
@@ -13,31 +13,31 @@ if (PlatformInfo.name == "ESP32") {
     var LED_PIN = 23;
     var POWER_PIN = 16;
 
-    var UP = 14;
-    var DOWN = 26;
-    var LEFT = 32;
-    var RIGHT = 13;
-    var MIDDLE = 17;
+    var UP_PIN = 14;
+    var DOWN_PIN = 26;
+    var LEFT_PIN = 32;
+    var RIGHT_PIN = 13;
+    var MIDDLE_PIN = 17;
 }
 else if (PlatformInfo.name == "ESP32-S3") {
     var LED_PIN = 45;
     var POWER_PIN = 0;
 
-    var UP = 8;
-    var DOWN = 14;
-    var LEFT = 10;
-    var RIGHT = 4;
-    var MIDDLE = 9;
+    var UP_PIN = 8;
+    var DOWN_PIN = 14;
+    var LEFT_PIN = 10;
+    var RIGHT_PIN = 4;
+    var MIDDLE_PIN = 9;
 }
 
-gpio.pinMode(POWER_PIN, gpio.PinMode.OUTPUT);
-gpio.write(POWER_PIN, 1);
+let strip = new SmartLed({
+    pin: LED_PIN,
+    count: 100,
+    type: LED_WS2812
+});
 
-for (let pin of [UP, DOWN, LEFT, RIGHT, MIDDLE]) {
-    gpio.pinMode(pin, gpio.PinMode.INPUT_PULLUP);
-}
-
-let strip = new SmartLed(LED_PIN, 100, LED_WS2812);
+let buffer = new ArrayBuffer(400);
+let view = new Uint32Array(buffer);
 
 interface Pos {
     x: number;
@@ -54,9 +54,12 @@ for (let i = 0; i < 10; i++) {
     }
 }
 
-function set(x: number, y: number, color: Rgb, brightness: number = 0.1) {
+function set(x: number, y: number, color: Rgb, brightness: number = 0.2) {
     brightness /= 4;
-    strip.set(x + y * 10, { r: color.r * brightness, g: color.g * brightness, b: color.b * brightness });
+    view[x + y * 10] =
+        (Math.floor(color.b * brightness) << 16) |
+        (Math.floor(color.r * brightness) << 8) |
+        (Math.floor(color.g * brightness));
 }
 
 let colors: Rgb[] = [
@@ -66,7 +69,7 @@ let colors: Rgb[] = [
 ];
 
 set(0, 0, { r: 0, g: 255, b: 0 });
-strip.show();
+strip.send(buffer);
 
 let turnRed = true;
 
@@ -114,47 +117,76 @@ function gameEnd(pos: Pos): { color: number, direction: number[], posCount: numb
 function update(oldPos: Pos, newPos: Pos) {
     set(oldPos.x, oldPos.y, colors[matrix[oldPos.x][oldPos.y]]);
     set(newPos.x, newPos.y, { r: 0, g: 255, b: 0 });
-    strip.show();
+    strip.send(buffer);
     pos = newPos;
 }
 
-gpio.on("falling", UP, () => {
-    update(pos, { x: pos.x, y: Math.max(0, pos.y - 1) });
+
+let power = new Digital({ pin: POWER_PIN, mode: Digital.Output });
+power.write(1);
+
+let up = new Digital({
+    pin: UP_PIN,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        update(pos, { x: pos.x, y: Math.max(0, pos.y - 1) });
+    }
 });
 
-gpio.on("falling", DOWN, () => {
-    update(pos, { x: pos.x, y: Math.min(9, pos.y + 1) });
+let down = new Digital({
+    pin: DOWN_PIN,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        update(pos, { x: pos.x, y: Math.min(9, pos.y + 1) });
+    }
 });
 
-gpio.on("falling", LEFT, () => {
-    update(pos, { x: Math.max(0, pos.x - 1), y: pos.y });
+let left = new Digital({
+    pin: LEFT_PIN,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        update(pos, { x: Math.max(0, pos.x - 1), y: pos.y });
+    }
 });
 
-gpio.on("falling", RIGHT, () => {
-    update(pos, { x: Math.min(9, pos.x + 1), y: pos.y });
+let right = new Digital({
+    pin: RIGHT_PIN,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        update(pos, { x: Math.min(9, pos.x + 1), y: pos.y });
+    }
 });
 
-gpio.on("falling", MIDDLE, () => {
-    if (matrix[pos.x][pos.y] === 0) {
-        matrix[pos.x][pos.y] = turnRed ? 1 : 2;
-        set(pos.x, pos.y, colors[matrix[pos.x][pos.y]]);
+let middle = new Digital({
+    pin: MIDDLE_PIN,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        if (matrix[pos.x][pos.y] === 0) {
+            matrix[pos.x][pos.y] = turnRed ? 1 : 2;
+            set(pos.x, pos.y, colors[matrix[pos.x][pos.y]]);
 
-        let end = gameEnd(pos);
-        if (end) {
-            for (let i = 1; i < end.posCount + 1; i++) {
-                set(pos.x + i * end.direction[0], pos.y + i * end.direction[1], colors[end.color], 0.5);
+            let end = gameEnd(pos);
+            if (end) {
+                for (let i = 1; i < end.posCount + 1; i++) {
+                    set(pos.x + i * end.direction[0], pos.y + i * end.direction[1], colors[end.color], 0.5);
+                }
+                for (let i = 1; i < end.negCount + 1; i++) {
+                    set(pos.x - i * end.direction[0], pos.y - i * end.direction[1], colors[end.color], 0.5);
+                }
+                set(pos.x, pos.y, colors[end.color], 0.5);
+                middle.close();
+                up.close();
+                down.close();
+                left.close();
+                right.close();
             }
-            for (let i = 1; i < end.negCount + 1; i++) {
-                set(pos.x - i * end.direction[0], pos.y - i * end.direction[1], colors[end.color], 0.5);
-            }
-            set(pos.x, pos.y, colors[end.color], 0.5);
-            gpio.off("falling", MIDDLE);
-            gpio.off("falling", UP);
-            gpio.off("falling", DOWN);
-            gpio.off("falling", LEFT);
-            gpio.off("falling", RIGHT);
+            turnRed = !turnRed;
+            strip.send(buffer);
         }
-        turnRed = !turnRed;
-        strip.show();
     }
 });

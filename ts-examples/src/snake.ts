@@ -1,5 +1,5 @@
-import { SmartLed, Rgb, LED_WS2812 } from "smartled";
-import * as gpio from "gpio";
+import { SmartLed, LED_WS2812, Rgb } from "smartled";
+import { Digital } from "embedded:io/digital";
 
 /**
  * A simple Snake game.
@@ -31,16 +31,23 @@ else if (PlatformInfo.name == "ESP32-S3") {
 const FOOD_COLOR = { r: 255, g: 0, b: 0 };
 const SNAKE_COLOR = { r: 0, g: 255, b: 0 };
 
-gpio.pinMode(POWER_PIN, gpio.PinMode.OUTPUT);
-gpio.write(POWER_PIN, 1);
+let power = new Digital({ pin: POWER_PIN, mode: Digital.Output });
+power.write(1);
 
-for (let pin of [UP, DOWN, LEFT, RIGHT, MIDDLE]) {
-    gpio.pinMode(pin, gpio.PinMode.INPUT_PULLUP);
-}
+let strip = new SmartLed({
+    pin: LED_PIN,
+    count: 100,
+    type: LED_WS2812
+});
 
-let strip = new SmartLed(LED_PIN, 100, LED_WS2812);
+let buffer = new ArrayBuffer(400);
+let view = new Uint32Array(buffer);
+
 function set(x: number, y: number, color: Rgb, brightness: number = 0.2) {
-    strip.set(x + y * 10, { r: color.r * brightness, g: color.g * brightness, b: color.b * brightness });
+    view[x + y * 10] =
+        (Math.floor(color.b * brightness) << 16) |
+        (Math.floor(color.r * brightness) << 8) |
+        (Math.floor(color.g * brightness));
 }
 
 let snake = [
@@ -65,21 +72,44 @@ function newFood() {
     return { x, y };
 }
 let food = newFood();
-strip.show();
+strip.send(buffer);
 
 let score = 0;
 
-gpio.on("falling", UP, () => {
-    direction = { x: 0, y: -1 };
+let up = new Digital({
+    pin: UP,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        direction = { x: 0, y: -1 };
+    }
 });
-gpio.on("falling", DOWN, () => {
-    direction = { x: 0, y: 1 };
+
+let down = new Digital({
+    pin: DOWN,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        direction = { x: 0, y: 1 };
+    }
 });
-gpio.on("falling", LEFT, () => {
-    direction = { x: -1, y: 0 };
+
+let left = new Digital({
+    pin: LEFT,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        direction = { x: -1, y: 0 };
+    }
 });
-gpio.on("falling", RIGHT, () => {
-    direction = { x: 1, y: 0 };
+
+let right = new Digital({
+    pin: RIGHT,
+    mode: Digital.InputPullUp,
+    edge: Digital.Falling,
+    onReadable: () => {
+        direction = { x: 1, y: 0 };
+    }
 });
 
 let blinkState = true;
@@ -87,7 +117,7 @@ function blinkSnake() {
     for (let pos of snake) {
         set(pos.x, pos.y, blinkState ? SNAKE_COLOR : { r: 0, g: 0, b: 0 });
     }
-    strip.show();
+    strip.send(buffer);
     blinkState = !blinkState;
 }
 
@@ -124,7 +154,7 @@ function step() {
         set(last.x, last.y, { r: 0, g: 0, b: 0 });
     }
     set(next.x, next.y, SNAKE_COLOR);
-    strip.show();
+    strip.send(buffer);
 }
 
 var timer = setInterval(step, 300);

@@ -15,12 +15,13 @@
 #include <jac/link/encoders/cobs.h>
 
 #include "espFeatures/smartLedFeature.h"
-#include "espFeatures/gpioFeature.h"
+#include "espFeatures/digitalFeature.h"
 #include "espFeatures/freeRTOSEventQueue.h"
-#include "espFeatures/ledcFeature.h"
-#include "espFeatures/adcFeature.h"
+#include "espFeatures/pwmFeature.h"
+#include "espFeatures/analogFeature.h"
 #include "espFeatures/i2cFeature.h"
 #include "espFeatures/simpleRadioFeature.h"
+#include "espFeatures/extendLifetimeFeature.h"
 
 #include "util/uartStream.h"
 
@@ -60,9 +61,10 @@ using Machine = jac::ComposeMachine<
     jac::FilesystemFeature,
     jac::ModuleLoaderFeature,
     jac::EventLoopFeature,
-    GpioFeature,
-    LedcFeature,
-    AdcFeature,
+    ExtendLifetimeFeature,
+    DigitalFeature,
+    PwmFeature,
+    AnalogFeature,
     I2CFeature,
     SmartLedFeature,
     jac::TimersFeature,
