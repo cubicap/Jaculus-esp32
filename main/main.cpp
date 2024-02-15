@@ -24,6 +24,8 @@
 
 #include "util/uartStream.h"
 
+#include "resources/resources.h"
+
 #include <string>
 #include <filesystem>
 #include <sstream>
@@ -93,6 +95,9 @@ jac::Device<Machine> device(
             return;
         }
         esp_partition_erase_range(partition, 0, partition->size);
+    },
+    {
+        {"ts-examples", resources::tsExamplesTgz}
     }
 );
 

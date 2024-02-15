@@ -1,0 +1,74 @@
+#include <cstdint>
+#include <span>
+#include <stdexcept>
+
+
+namespace resources {
+
+namespace detail {
+
+    template<std::size_t N>
+    struct const_string {
+        char data[N - 1];
+        constexpr size_t size() const { return N - 1; }
+
+        constexpr const_string(const char (&str)[N]) {
+            for (size_t i = 0; i < N - 1; ++i) {
+                data[i] = str[i];
+            }
+        }
+
+        constexpr const_string() {
+            for (size_t i = 0; i < N - 1; ++i) {
+                data[i] = 0;
+            }
+        }
+    };
+
+    constexpr uint8_t hexCharToByte(char c) {
+        if (c >= 'A' && c <= 'F') {
+            c = c - 'A' + 'a';
+        }
+
+        if (c >= '0' && c <= '9') {
+            return c - '0';
+        }
+        else if (c >= 'a' && c <= 'f') {
+            return c - 'a' + 10;
+        }
+        else {
+            throw std::invalid_argument("Invalid hex character");
+        }
+    }
+
+
+    template<const_string hexString>
+    constexpr auto operator"" _raw() {
+        constexpr std::size_t size = hexString.size();
+
+        if constexpr (size % 2 != 0) {
+            throw std::invalid_argument("Invalid hex string");
+        }
+
+        const_string<size / 2 + 1> result;
+
+        for (size_t i = 0; i < size; i += 2) {
+            result.data[i / 2] = (hexCharToByte(hexString.data[i]) << 4) | hexCharToByte(hexString.data[i + 1]);
+        }
+
+        return result;
+    }
+
+} // namespace detail
+
+namespace raw {
+
+    using detail::operator""_raw;
+
+    constexpr auto tsExamplesTgzRaw = "@TS_EXAMPLES_TGZ@"_raw;
+
+} // namespace raw
+
+std::span<const uint8_t> tsExamplesTgz(reinterpret_cast<const uint8_t*>(raw::tsExamplesTgzRaw.data), raw::tsExamplesTgzRaw.size());
+
+} // namespace resources
