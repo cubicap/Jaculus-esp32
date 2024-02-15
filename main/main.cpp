@@ -188,7 +188,35 @@ int main() {
 
     device.start();
 
-    device.startMachine("index.js");
+    esp_reset_reason_t resetReason = esp_reset_reason();
+    const char* resetReasonStr = nullptr;
+    bool startMachine = false;
+
+    switch (resetReason) {
+        case ESP_RST_PANIC:     //!< Software reset due to exception/panic
+            resetReasonStr = "Software reset due to exception/panic";
+            break;
+        case ESP_RST_INT_WDT:   //!< Reset (software or hardware) due to interrupt watchdog
+            resetReasonStr = "Reset (software or hardware) due to interrupt watchdog";
+            break;
+        case ESP_RST_TASK_WDT:  //!< Reset due to task watchdog
+            resetReasonStr = "Reset due to task watchdog";
+            break;
+        case ESP_RST_WDT:       //!< Reset due to other watchdogs
+            resetReasonStr = "Reset due to other watchdogs";
+            break;
+        default:
+            startMachine = true;
+            break;
+    }
+
+    if (resetReasonStr != nullptr) {
+        jac::Logger::error(std::string(resetReasonStr));
+    }
+
+    if (startMachine) {
+        device.startMachine("index.js");
+    }
 }
 
 
