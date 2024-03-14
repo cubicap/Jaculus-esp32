@@ -1,11 +1,15 @@
 declare module "gpio" {
     const PinMode: {
-        DISABLE: number,
-        OUTPUT: number,
-        INPUT: number,
-        INPUT_PULLUP: number,
-        INPUT_PULLDOWN: number,
+        readonly DISABLE: number,
+        readonly OUTPUT: number,
+        readonly INPUT: number,
+        readonly INPUT_PULLUP: number,
+        readonly INPUT_PULLDOWN: number,
     };
+
+    interface EventInfo {
+        timestamp: number;
+    }
 
     /**
      * Configure the given pin.
@@ -34,7 +38,7 @@ declare module "gpio" {
      * @param pin The pin to handle the event for.
      * @param callback The callback to call when the event occurs.
      */
-    function on(event: "rising" | "falling" | "change", pin: number, callback: () => void): void;
+    function on(event: "rising" | "falling" | "change", pin: number, callback: (info: EventInfo) => void): void;
 
     /**
      * Remove event handler for the given pin.
