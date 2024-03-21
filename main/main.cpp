@@ -22,6 +22,7 @@
 #include "espFeatures/i2cFeature.h"
 #include "espFeatures/simpleRadioFeature.h"
 #include "espFeatures/extendLifetimeFeature.h"
+#include "espFeatures/pulseCounterFeature.h"
 
 #include "util/uartStream.h"
 
@@ -61,13 +62,14 @@ using Machine = jac::ComposeMachine<
     jac::FilesystemFeature,
     jac::ModuleLoaderFeature,
     jac::EventLoopFeature,
+    jac::TimersFeature,
     ExtendLifetimeFeature,
     GpioFeature,
     LedcFeature,
     AdcFeature,
     I2CFeature,
     SmartLedFeature,
-    jac::TimersFeature,
+    PulseCounterFeature,
     SimpleRadioFeature,
     jac::EventLoopTerminal
 >;
