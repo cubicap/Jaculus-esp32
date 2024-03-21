@@ -23,6 +23,7 @@
 #include "espFeatures/simpleRadioFeature.h"
 #include "espFeatures/extendLifetimeFeature.h"
 #include "espFeatures/pulseCounterFeature.h"
+#include "espFeatures/timestampFeature.h"
 
 #include "util/uartStream.h"
 
@@ -63,6 +64,7 @@ using Machine = jac::ComposeMachine<
     jac::ModuleLoaderFeature,
     jac::EventLoopFeature,
     jac::TimersFeature,
+    TimestampFeature,
     ExtendLifetimeFeature,
     GpioFeature,
     LedcFeature,

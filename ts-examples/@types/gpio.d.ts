@@ -8,7 +8,7 @@ declare module "gpio" {
     };
 
     interface EventInfo {
-        timestamp: number;
+        timestamp: Timestamp;
     }
 
     /**

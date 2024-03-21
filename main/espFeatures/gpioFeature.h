@@ -312,9 +312,9 @@ public:
         module.addExport("PinMode", pinModeEnum);
 
         module.addExport("on", ff.newFunction([this](std::string event, int pin, jac::Function callback) {
-            this->gpio.on(event, pin, [ctx = this->context(), callback = std::move(callback)](Next::TimePoint timestamp) mutable {
-                jac::Object info = jac::Object::create(ctx);
-                info.set<int>("timestamp", std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count());
+            this->gpio.on(event, pin, [this, callback = std::move(callback)](Next::TimePoint timestamp) mutable {
+                jac::Object info = jac::Object::create(this->context());
+                info.set("timestamp", this->createTimestamp(timestamp));
 
                 callback.call<void>(info);
             });
