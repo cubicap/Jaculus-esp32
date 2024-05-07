@@ -109,7 +109,11 @@ public:
 
         jac::Module& simpleradioModule = this->newModule("simpleradio");
 
-        simpleradioModule.addExport("begin", ff.newFunction(noal::function([](int group) { SimpleRadio.begin(group); })));
+        simpleradioModule.addExport("begin", ff.newFunction(noal::function([](int group) {
+            auto config = SimpleRadio.DEFAULT_CONFIG;
+            config.init_nvs = false; // Jaculus-Esp32 initializes it
+            SimpleRadio.begin(group, config);
+        })));
         simpleradioModule.addExport("setGroup", ff.newFunction(noal::function([](int group) { SimpleRadio.setGroup(group); })));
         simpleradioModule.addExport("group", ff.newFunction(noal::function([]() -> int { return SimpleRadio.group(); })));
         simpleradioModule.addExport("address", ff.newFunction(noal::function([]() -> EspBdAddress {
