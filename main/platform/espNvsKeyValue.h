@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <jac/device/keyvalue.h>
 #include <jac/device/logger.h>
 #include "nvs_flash.h"
@@ -7,6 +8,16 @@
 class EspNvsKeyValue : public jac::KeyValueNamespace {
     nvs_handle_t _handle;
 public:
+    static std::unique_ptr<EspNvsKeyValue> open(const std::string& nsname) {
+        nvs_handle_t handle;
+        auto err = nvs_open(nsname.c_str(), NVS_READWRITE, &handle);
+        if(err != ESP_OK) {
+            jac::Logger::error("Failed to open NVS namespace " + nsname + ": "+ std::string(esp_err_to_name(err)));
+            return std::unique_ptr<EspNvsKeyValue>();
+        }
+        return std::make_unique<EspNvsKeyValue>(handle);
+    }
+
     EspNvsKeyValue(nvs_handle_t handle) : _handle(handle) {
 
     }
@@ -44,7 +55,7 @@ public:
         }
     }
 
-    int64_t getInt(const std::string& name, int64_t def_value) {
+    int64_t getInt(const std::string& name, int64_t def_value = 0) {
         auto res = nvs_get_i64(_handle, name.c_str(), &def_value);
         if(res != ESP_OK && res != ESP_ERR_NVS_NOT_FOUND) {
             jac::Logger::error("Unexpected error in EspNvsKeyValue::getInt for " + name + ": " + std::string(esp_err_to_name(res)));
@@ -52,7 +63,7 @@ public:
         return def_value;
     }
 
-    float getFloat(const std::string& name, float def_value) {
+    float getFloat(const std::string& name, float def_value = 0.f) {
         auto res = nvs_get_u32(_handle, name.c_str(), static_cast<uint32_t*>(static_cast<void*>(&def_value)));
         if(res != ESP_OK && res != ESP_ERR_NVS_NOT_FOUND) {
             jac::Logger::error("Unexpected error in EspNvsKeyValue::getFloat for " + name + ": " + std::string(esp_err_to_name(res)));
@@ -60,7 +71,7 @@ public:
         return def_value;
     }
 
-    std::string getString(const std::string& name, std::string def_value) {
+    std::string getString(const std::string& name, std::string def_value = "") {
         size_t str_len = 0;
 
         auto err = nvs_get_str(_handle, name.c_str(), NULL, &str_len);
@@ -88,3 +99,4 @@ public:
         return res == ESP_OK;
     }
 };
+
