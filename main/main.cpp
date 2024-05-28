@@ -25,6 +25,7 @@
 #include "espFeatures/pulseCounterFeature.h"
 #include "espFeatures/timestampFeature.h"
 #include "espFeatures/wifiFeature.h"
+#include "espFeatures/gridui/gridUiFeature.h"
 
 #include "platform/espNvsKeyValue.h"
 #include "platform/espWifi.h"
@@ -79,6 +80,7 @@ using Machine = jac::ComposeMachine<
     PulseCounterFeature,
     SimpleRadioFeature,
     WifiFeature,
+    GridUiFeature,
     jac::EventLoopTerminal
 >;
 
