@@ -1,7 +1,7 @@
 set(JAC_ESP32_VERSION "0.0.7")
 
 idf_component_register(
-    SRCS "main.cpp" "platform/espWifi.cpp" "platform/espNvsKeyValue.cpp"
+    SRCS "main.cpp" "platform/espWifi.cpp" "platform/espNvsKeyValue.cpp" "espFeatures/gridui/gridUiFeature.cpp"
     INCLUDE_DIRS ""
     REQUIRES jac-dcore jac-machine jac-link
              driver pthread spiffs vfs fatfs
@@ -12,3 +12,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE JAC_ESP32_VERSION="${JAC_ESP
 
 add_subdirectory(resources)
 target_link_libraries(${COMPONENT_LIB} PRIVATE resources)
+
+if(${ESP_PLATFORM})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mlongcalls -mtext-section-literals")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlongcalls -mtext-section-literals")
+endif()
