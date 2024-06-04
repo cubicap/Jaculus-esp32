@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <esp_log.h>
+#include <map>
 
 #include <jac/machine/machine.h>
 #include <jac/machine/functionFactory.h>
@@ -9,9 +10,14 @@
 
 #include <gridui.h>
 
+class GridUiBuilderProtoBuilder;
+
 class GridUiHolder {
+    friend class GridUiBuilderProtoBuilder;
+
     TaskHandle_t _web_server_task;
     std::unique_ptr<rb::Protocol> _protocol;
+    std::map<intptr_t, jac::Object> _protos;
 
     static void defaultOnPacketReceived(const std::string& cmd, rbjson::Object* pkt);
 

@@ -21,48 +21,65 @@
 
 #include "gridUiFeature.h"
 
-struct GridUiBuilderProtoBuilder : public jac::ProtoBuilder::Opaque<gridui::_GridUi>, public jac::ProtoBuilder::Properties {
-    static void destroyOpaque(JSRuntime* rt, gridui::_GridUi* ptr) noexcept { }
+class GridUiBuilderProtoBuilder : public jac::ProtoBuilder::Opaque<GridUiHolder>, public jac::ProtoBuilder::Properties {
+public:
+    static void destroyOpaque(JSRuntime* rt, GridUiHolder* ptr) noexcept { }
 
-    template<typename BuilderClassProto, typename BuilderWidgetT>
-    static jac::Object builder(jac::ContextRef ctx, jac::ValueWeak thisValue, std::vector<jac::ValueWeak> args) {
+    template<typename BuilderWidgetT, jac::Object(*ProtoBuilder)(jac::ContextRef, std::map<intptr_t, jac::Object>&)>
+    static jac::Object builder(jac::ContextRef ctx, jac::ValueWeak thisVal, std::vector<jac::ValueWeak> args) {
+        auto& holder = *GridUiBuilderProtoBuilder::getOpaque(ctx, thisVal);
+
         if (args.size() < 4) {
             throw jac::Exception::create(jac::Exception::Type::TypeError, "expected at least 4 arguments");
         }
-        
+
         uint16_t uuid = 0;
         uint16_t tab = 0;
         if(args.size() >= 5) {
             uuid = args[4].to<uint16_t>();
         }
-
         if(args.size() >= 6) {
             tab = args[5].to<uint16_t>();
         }
 
         auto widget = gridui::UI.newWidget<BuilderWidgetT>(args[0].to<float>(), args[1].to<float>(), args[2].to<float>(), args[3].to<float>(), uuid, tab);
-        return jac::Class<BuilderClassProto>::createInstance(ctx, widget);
+
+        auto obj = jac::Object::create(ctx);
+        JS_SetOpaque(obj.getVal(), widget);
+
+        auto protoKey = (intptr_t)widget->widgetTypeName();
+        auto itr = holder._protos.find(protoKey);
+        if(itr == holder._protos.end()) {
+            auto proto = ProtoBuilder(ctx, holder._protos);
+            obj.setPrototype(proto);
+            holder._protos.emplace(protoKey, proto);
+        } else {
+            obj.setPrototype(itr->second);
+        }
+        return obj;
     }
 
     static void addProperties(JSContext* ctx, jac::Object proto) {
         using namespace gridui::builder;
         jac::FunctionFactory ff(ctx);
 
-        proto.defineProperty("arm", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderArm, Arm>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("bar", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderBar, Bar>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("button", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderButton, Button>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("camera", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderCamera, Camera>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("checkbox", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderCheckbox, Checkbox>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("circle", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderCircle, Circle>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("input", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderInput, Input>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("joystick", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderJoystick, Joystick>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("led", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderLed, Led>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("orientation", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderOrientation, Orientation>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("select", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderSelect, Select>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("slider", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderSlider, Slider>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("spinEdit", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderSpinEdit, SpinEdit>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("switcher", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderSwitcher, Switcher>)), jac::PropFlags::Enumerable);
-        proto.defineProperty("text", ff.newFunctionThisVariadic(std::function(&builder<GridUiBuilderText, Text>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("arm", ff.newFunctionThisVariadic(std::function(&builder<Arm, griduiBuilderArmProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("bar", ff.newFunctionThisVariadic(std::function(&builder<Bar, griduiBuilderBarProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("button", ff.newFunctionThisVariadic(std::function(&builder<Button, griduiBuilderButtonProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("camera", ff.newFunctionThisVariadic(std::function(&builder<Camera, griduiBuilderCameraProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("checkbox", ff.newFunctionThisVariadic(std::function(&builder<Checkbox, griduiBuilderCheckboxProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("circle", ff.newFunctionThisVariadic(std::function(&builder<Circle, griduiBuilderCircleProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("input", ff.newFunctionThisVariadic(std::function(&builder<Input, griduiBuilderInputProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("joystick", ff.newFunctionThisVariadic(std::function(&builder<Joystick, griduiBuilderJoystickProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("led", ff.newFunctionThisVariadic(std::function(&builder<Led, griduiBuilderLedProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("orientation", ff.newFunctionThisVariadic(std::function(&builder<Orientation, griduiBuilderOrientationProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("select", ff.newFunctionThisVariadic(std::function(&builder<Select, griduiBuilderSelectProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("slider", ff.newFunctionThisVariadic(std::function(&builder<Slider, griduiBuilderSliderProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("spinEdit", ff.newFunctionThisVariadic(std::function(&builder<SpinEdit, griduiBuilderSpinEditProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("switcher", ff.newFunctionThisVariadic(std::function(&builder<Switcher, griduiBuilderSwitcherProto>)), jac::PropFlags::Enumerable);
+        proto.defineProperty("text", ff.newFunctionThisVariadic(std::function(&builder<Text, griduiBuilderTextProto>)), jac::PropFlags::Enumerable);
+
+
     }
 };
 
@@ -70,37 +87,6 @@ class GridUiClassInitializer {
 public:
     GridUiClassInitializer() {
         jac::Class<GridUiBuilderProtoBuilder>::init("guiBuilder");
-
-        jac::Class<GridUiBuilderArm>::init("guiArmBuilder");
-        jac::Class<GridUiWidgetArm>::init("guiArm");
-        jac::Class<GridUiBuilderBar>::init("guiBarBuilder");
-        jac::Class<GridUiWidgetBar>::init("guiBar");
-        jac::Class<GridUiBuilderButton>::init("guiButtonBuilder");
-        jac::Class<GridUiWidgetButton>::init("guiButton");
-        jac::Class<GridUiBuilderCamera>::init("guiCameraBuilder");
-        jac::Class<GridUiWidgetCamera>::init("guiCamera");
-        jac::Class<GridUiBuilderCheckbox>::init("guiCheckboxBuilder");
-        jac::Class<GridUiWidgetCheckbox>::init("guiCheckbox");
-        jac::Class<GridUiBuilderCircle>::init("guiCircleBuilder");
-        jac::Class<GridUiWidgetCircle>::init("guiCircle");
-        jac::Class<GridUiBuilderInput>::init("guiInputBuilder");
-        jac::Class<GridUiWidgetInput>::init("guiInput");
-        jac::Class<GridUiBuilderJoystick>::init("guiJoystickBuilder");
-        jac::Class<GridUiWidgetJoystick>::init("guiJoystick");
-        jac::Class<GridUiBuilderLed>::init("guiLedBuilder");
-        jac::Class<GridUiWidgetLed>::init("guiLed");
-        jac::Class<GridUiBuilderOrientation>::init("guiOrientationBuilder");
-        jac::Class<GridUiWidgetOrientation>::init("guiOrientation");
-        jac::Class<GridUiBuilderSelect>::init("guiSelectBuilder");
-        jac::Class<GridUiWidgetSelect>::init("guiSelect");
-        jac::Class<GridUiBuilderSlider>::init("guiSliderBuilder");
-        jac::Class<GridUiWidgetSlider>::init("guiSlider");
-        jac::Class<GridUiBuilderSpinEdit>::init("guiSpinEditBuilder");
-        jac::Class<GridUiWidgetSpinEdit>::init("guiSpinEdit");
-        jac::Class<GridUiBuilderSwitcher>::init("guiSwitcherBuilder");
-        jac::Class<GridUiWidgetSwitcher>::init("guiSwitcher");
-        jac::Class<GridUiBuilderText>::init("guiTextBuilder");
-        jac::Class<GridUiWidgetText>::init("guiText");
     }
 };
 
@@ -132,7 +118,8 @@ void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::st
     _protocol->start();
 
     UI.begin(_protocol.get());
-    builderCallback.call<void>(jac::Class<GridUiBuilderProtoBuilder>::createInstance(context, &UI));
+    builderCallback.call<void>(jac::Class<GridUiBuilderProtoBuilder>::createInstance(context, this));
+    _protos.clear();
     UI.commit();
 }
 
@@ -140,6 +127,8 @@ void GridUiHolder::end() {
     if(!_web_server_task) {
         return;
     }
+
+    _protos.clear();
 
     gridui::UI.end();
 
