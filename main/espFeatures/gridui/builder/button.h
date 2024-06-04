@@ -3,134 +3,77 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
-static jac::Object griduiButtonProto(jac::ContextRef ctx) {
-    jac::FunctionFactory ff(ctx);
+namespace gridui_jac {
 
-    auto proto = jac::Object::create(ctx);
-    
-    proto.set("setText", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string text) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setText(text);
-    }));
-    proto.set("text", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.text();
-    }));
-    proto.set("setFontSize", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, float fontSize) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setFontSize(fontSize);
-    }));
-    proto.set("fontSize", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.fontSize();
-    }));
-    proto.set("setColor", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string color) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setColor(color);
-    }));
-    proto.set("color", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.color();
-    }));
-    proto.set("setBackground", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string background) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setBackground(background);
-    }));
-    proto.set("background", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.background();
-    }));
-    proto.set("setAlign", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string align) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setAlign(align);
-    }));
-    proto.set("align", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.align();
-    }));
-    proto.set("setValign", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string valign) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setValign(valign);
-    }));
-    proto.set("valign", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.valign();
-    }));
-    proto.set("setDisabled", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, bool disabled) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setDisabled(disabled);
-    }));
-    proto.set("disabled", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.disabled();
-    }));
+class ButtonBuilder {
+    static JSValue text(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.text(val.to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-    return proto;
-}
+    static JSValue fontSize(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.fontSize(val.to<float>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-static jac::Object griduiBuilderButtonProto(jac::ContextRef ctx, std::map<intptr_t, jac::Object>& _protoCache) {
-    jac::FunctionFactory ff(ctx);
+    static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.color(val.to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-    auto proto = jac::Object::create(ctx);
-    
-    proto.set("text", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string text) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.text(text);
-        return thisVal;
-    }));
-    proto.set("fontSize", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, float fontSize) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.fontSize(fontSize);
-        return thisVal;
-    }));
-    proto.set("color", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string color) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.color(color);
-        return thisVal;
-    }));
-    proto.set("background", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string background) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.background(background);
-        return thisVal;
-    }));
-    proto.set("align", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string align) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.align(align);
-        return thisVal;
-    }));
-    proto.set("valign", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string valign) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.valign(valign);
-        return thisVal;
-    }));
-    proto.set("disabled", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, bool disabled) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.disabled(disabled);
-        return thisVal;
-    }));
+    static JSValue background(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.background(val.to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-    proto.set("finish", ff.newFunctionThis([&_protoCache](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal.getVal(), 1));
+    static JSValue align(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.align(val.to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-        auto widget = new gridui::Button(std::move(builder.finish()));
+    static JSValue valign(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.valign(val.to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-        auto obj = jac::Object::create(ctx);
-        JS_SetOpaque(obj.getVal(), widget);
+    static JSValue disabled(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.disabled(val.to<bool>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-        static const char *protoName = "protoButtonWidget";
-        auto protoKey = (intptr_t)protoName;
+public:
+    static jac::Object proto(jac::ContextRef ctx) {
+        auto proto = jac::Object::create(ctx);
+        proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 0)));
+        proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 0)));
+        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 0)));
+        proto.set("background", jac::Value(ctx, JS_NewCFunction(ctx, background, "background", 0)));
+        proto.set("align", jac::Value(ctx, JS_NewCFunction(ctx, align, "align", 0)));
+        proto.set("valign", jac::Value(ctx, JS_NewCFunction(ctx, valign, "valign", 0)));
+        proto.set("disabled", jac::Value(ctx, JS_NewCFunction(ctx, disabled, "disabled", 0)));
+        return proto;
+    }
+};
 
-        auto itr = _protoCache.find(protoKey);
-        if(itr == _protoCache.end()) {
-            auto proto = griduiButtonProto(ctx);
-            obj.setPrototype(proto);
-            _protoCache.emplace(protoKey, proto);
-        } else {
-            obj.setPrototype(itr->second);
-        }
-
-        return obj;
-    }));
-    return proto;
-}
-
+};

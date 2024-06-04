@@ -3,69 +3,32 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
-static jac::Object griduiLedProto(jac::ContextRef ctx) {
-    jac::FunctionFactory ff(ctx);
+namespace gridui_jac {
 
-    auto proto = jac::Object::create(ctx);
-    
-    proto.set("setColor", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string color) {
-        auto& widget = *reinterpret_cast<gridui::Led*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setColor(color);
-    }));
-    proto.set("color", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Led*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.color();
-    }));
-    proto.set("setOn", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, bool on) {
-        auto& widget = *reinterpret_cast<gridui::Led*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setOn(on);
-    }));
-    proto.set("on", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Led*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.on();
-    }));
+class LedBuilder {
+    static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Led*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.color(val.to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-    return proto;
-}
+    static JSValue on(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Led*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.on(val.to<bool>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-static jac::Object griduiBuilderLedProto(jac::ContextRef ctx, std::map<intptr_t, jac::Object>& _protoCache) {
-    jac::FunctionFactory ff(ctx);
+public:
+    static jac::Object proto(jac::ContextRef ctx) {
+        auto proto = jac::Object::create(ctx);
+        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 0)));
+        proto.set("on", jac::Value(ctx, JS_NewCFunction(ctx, on, "on", 0)));
+        return proto;
+    }
+};
 
-    auto proto = jac::Object::create(ctx);
-    
-    proto.set("color", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string color) {
-        auto& builder = *reinterpret_cast<gridui::builder::Led*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.color(color);
-        return thisVal;
-    }));
-    proto.set("on", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, bool on) {
-        auto& builder = *reinterpret_cast<gridui::builder::Led*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.on(on);
-        return thisVal;
-    }));
-
-    proto.set("finish", ff.newFunctionThis([&_protoCache](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& builder = *reinterpret_cast<gridui::builder::Led*>(JS_GetOpaque(thisVal.getVal(), 1));
-
-        auto widget = new gridui::Led(std::move(builder.finish()));
-
-        auto obj = jac::Object::create(ctx);
-        JS_SetOpaque(obj.getVal(), widget);
-
-        static const char *protoName = "protoLedWidget";
-        auto protoKey = (intptr_t)protoName;
-
-        auto itr = _protoCache.find(protoKey);
-        if(itr == _protoCache.end()) {
-            auto proto = griduiLedProto(ctx);
-            obj.setPrototype(proto);
-            _protoCache.emplace(protoKey, proto);
-        } else {
-            obj.setPrototype(itr->second);
-        }
-
-        return obj;
-    }));
-    return proto;
-}
-
+};

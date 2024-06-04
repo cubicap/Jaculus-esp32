@@ -10,19 +10,14 @@
 
 #include <gridui.h>
 
-class GridUiBuilderProtoBuilder;
-
 class GridUiHolder {
-    friend class GridUiBuilderProtoBuilder;
-
-    TaskHandle_t _web_server_task;
+    TaskHandle_t _webServerTask;
     std::unique_ptr<rb::Protocol> _protocol;
-    std::map<intptr_t, jac::Object> _protos;
 
     static void defaultOnPacketReceived(const std::string& cmd, rbjson::Object* pkt);
 
 public:
-    GridUiHolder() : _web_server_task(nullptr) { }
+    GridUiHolder() : _webServerTask(nullptr) { }
 
     void begin(jac::ContextRef context, std::string ownerName, std::string deviceName, jac::Function builderCallback);
     void end();

@@ -3,95 +3,50 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
-static jac::Object griduiCheckboxProto(jac::ContextRef ctx) {
-    jac::FunctionFactory ff(ctx);
+namespace gridui_jac {
 
-    auto proto = jac::Object::create(ctx);
-    
-    proto.set("setFontSize", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, float fontSize) {
-        auto& widget = *reinterpret_cast<gridui::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setFontSize(fontSize);
-    }));
-    proto.set("fontSize", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.fontSize();
-    }));
-    proto.set("setChecked", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, bool checked) {
-        auto& widget = *reinterpret_cast<gridui::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setChecked(checked);
-    }));
-    proto.set("checked", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.checked();
-    }));
-    proto.set("setColor", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string color) {
-        auto& widget = *reinterpret_cast<gridui::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setColor(color);
-    }));
-    proto.set("color", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.color();
-    }));
-    proto.set("setText", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string text) {
-        auto& widget = *reinterpret_cast<gridui::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        widget.setText(text);
-    }));
-    proto.set("text", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        return widget.text();
-    }));
+class CheckboxBuilder {
+    static JSValue fontSize(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.fontSize(val.to<float>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-    return proto;
-}
+    static JSValue checked(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.checked(val.to<bool>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-static jac::Object griduiBuilderCheckboxProto(jac::ContextRef ctx, std::map<intptr_t, jac::Object>& _protoCache) {
-    jac::FunctionFactory ff(ctx);
+    static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.color(val.to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-    auto proto = jac::Object::create(ctx);
-    
-    proto.set("fontSize", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, float fontSize) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.fontSize(fontSize);
-        return thisVal;
-    }));
-    proto.set("checked", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, bool checked) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.checked(checked);
-        return thisVal;
-    }));
-    proto.set("color", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string color) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.color(color);
-        return thisVal;
-    }));
-    proto.set("text", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::string text) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
-        builder.text(text);
-        return thisVal;
-    }));
+    static JSValue text(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal, 1));
+        if(argc < 1) throw jac::Exception::create(jac::Exception::Type::TypeError, "1 argument expected");
+        auto val = jac::ValueWeak(jac::ContextRef(ctx_), argv[0]);
+        builder.text(val.to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
 
-    proto.set("finish", ff.newFunctionThis([&_protoCache](jac::ContextRef ctx, jac::ValueWeak thisVal) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal.getVal(), 1));
+public:
+    static jac::Object proto(jac::ContextRef ctx) {
+        auto proto = jac::Object::create(ctx);
+        proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 0)));
+        proto.set("checked", jac::Value(ctx, JS_NewCFunction(ctx, checked, "checked", 0)));
+        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 0)));
+        proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 0)));
+        return proto;
+    }
+};
 
-        auto widget = new gridui::Checkbox(std::move(builder.finish()));
-
-        auto obj = jac::Object::create(ctx);
-        JS_SetOpaque(obj.getVal(), widget);
-
-        static const char *protoName = "protoCheckboxWidget";
-        auto protoKey = (intptr_t)protoName;
-
-        auto itr = _protoCache.find(protoKey);
-        if(itr == _protoCache.end()) {
-            auto proto = griduiCheckboxProto(ctx);
-            obj.setPrototype(proto);
-            _protoCache.emplace(protoKey, proto);
-        } else {
-            obj.setPrototype(itr->second);
-        }
-
-        return obj;
-    }));
-    return proto;
-}
-
+};
