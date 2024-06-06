@@ -2,6 +2,7 @@
 
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
+#include "./_common.h"
 
 namespace gridui_jac {
 
