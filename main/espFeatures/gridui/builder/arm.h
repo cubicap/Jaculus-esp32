@@ -2,6 +2,7 @@
 
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
+#include "../widgets/arm.h"
 
 namespace gridui_jac {
 
@@ -12,6 +13,7 @@ class ArmBuilder {
         builder.info(std::unique_ptr<rbjson::Object>(rbjson::parse((char*)json.c_str(), json.size())));
         return JS_DupValue(ctx_, thisVal);
     }
+
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {

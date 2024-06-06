@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/button.h"
+
 namespace gridui_jac {
 
 class ButtonBuilder {
@@ -48,6 +50,34 @@ class ButtonBuilder {
         return JS_DupValue(ctx_, thisVal);
     }
 
+    static JSValue onPress(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+
+        auto callback = jac::Value(ctx_, JS_DupValue(ctx_, argv[0])).to<jac::Function>();
+        builder.onPress([=](gridui::Widget& widget) {
+            const auto uuid = widget.uuid();
+            GridUiContext::get().scheduleEvent([=]() mutable {
+                auto obj = GridUiContext::get().getConstructedWidget(ctx_, uuid);
+                callback.call<void>(obj);
+            });
+        });
+        return JS_DupValue(ctx_, thisVal);
+    }
+
+    static JSValue onRelease(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+
+        auto callback = jac::Value(ctx_, JS_DupValue(ctx_, argv[0])).to<jac::Function>();
+        builder.onRelease([=](gridui::Widget& widget) {
+            const auto uuid = widget.uuid();
+            GridUiContext::get().scheduleEvent([=]() mutable {
+                auto obj = GridUiContext::get().getConstructedWidget(ctx_, uuid);
+                callback.call<void>(obj);
+            });
+        });
+        return JS_DupValue(ctx_, thisVal);
+    }
+
 public:
     static jac::Object proto(jac::ContextRef ctx) {
         auto proto = jac::Object::create(ctx);
@@ -58,6 +88,9 @@ public:
         proto.set("align", jac::Value(ctx, JS_NewCFunction(ctx, align, "align", 1)));
         proto.set("valign", jac::Value(ctx, JS_NewCFunction(ctx, valign, "valign", 1)));
         proto.set("disabled", jac::Value(ctx, JS_NewCFunction(ctx, disabled, "disabled", 1)));
+
+        proto.set("onPress", jac::Value(ctx, JS_NewCFunction(ctx, onPress, "onPress", 1)));
+        proto.set("onRelease", jac::Value(ctx, JS_NewCFunction(ctx, onRelease, "onRelease", 1)));
         return proto;
     }
 };

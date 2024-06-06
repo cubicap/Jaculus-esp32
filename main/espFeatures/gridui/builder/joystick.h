@@ -24,12 +24,28 @@ class JoystickBuilder {
         return JS_DupValue(ctx_, thisVal);
     }
 
+    static JSValue onPositionChanged(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<gridui::builder::Joystick*>(JS_GetOpaque(thisVal, 1));
+
+        auto callback = jac::Value(ctx_, JS_DupValue(ctx_, argv[0])).to<jac::Function>();
+        builder.onPositionChanged([=](gridui::Widget& widget) {
+            const auto uuid = widget.uuid();
+            GridUiContext::get().scheduleEvent([=]() mutable {
+                auto obj = GridUiContext::get().getConstructedWidget(ctx_, uuid);
+                callback.call<void>(obj);
+            });
+        });
+        return JS_DupValue(ctx_, thisVal);
+    }
+
 public:
     static jac::Object proto(jac::ContextRef ctx) {
         auto proto = jac::Object::create(ctx);
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
         proto.set("keys", jac::Value(ctx, JS_NewCFunction(ctx, keys, "keys", 1)));
         proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
+
+        proto.set("onPositionChanged", jac::Value(ctx, JS_NewCFunction(ctx, onPositionChanged, "onPositionChanged", 1)));
         return proto;
     }
 };

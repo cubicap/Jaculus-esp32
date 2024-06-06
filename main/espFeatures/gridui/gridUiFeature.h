@@ -10,6 +10,8 @@
 
 #include <gridui.h>
 
+#include "widgets/_common.h"
+
 class GridUiHolder {
     TaskHandle_t _webServerTask;
     std::unique_ptr<rb::Protocol> _protocol;
@@ -37,6 +39,10 @@ public:
         using namespace gridui;
         using namespace std::placeholders;
 
+        gridui_jac::GridUiContext::get().setScheduleEvent([this](std::function<void()> event) {
+            this->scheduleEvent(event);
+        });
+
         jac::FunctionFactory ff(this->context());
 
         jac::Module& griduiModule = this->newModule("gridui");
@@ -49,5 +55,6 @@ public:
 
     ~GridUiFeature() {
         _holder.end();
+        gridui_jac::GridUiContext::get().setScheduleEvent(nullptr);
     }
 };

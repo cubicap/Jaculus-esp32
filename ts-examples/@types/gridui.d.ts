@@ -56,6 +56,9 @@ declare module "gridui" {
             color: string
             keys: string
             text: string
+
+            x: number;
+            y: number;
         }
 
         interface Led {
@@ -115,7 +118,9 @@ declare module "gridui" {
 
     namespace builder {
         interface Arm {
-            info(infoJson: string): Arm;
+            info(info: Record<string, any>): Arm;
+
+            finish(): widget.Arm;
         }
 
         interface Bar {
@@ -125,6 +130,8 @@ declare module "gridui" {
             max(max: number): Bar;
             value(value: number): Bar;
             showValue(showValue: boolean): Bar;
+
+            finish(): widget.Bar;
         }
 
         interface Button {
@@ -135,12 +142,19 @@ declare module "gridui" {
             align(align: string): Button;
             valign(valign: string): Button;
             disabled(disabled: boolean): Button;
+
+            onPress(callback: (widget: widget.Button) => void): Button;
+            onRelease(callback: (widget: widget.Button) => void): Button;
+
+            finish(): widget.Button;
         }
 
         interface Camera {
             rotation(rotation: number): Camera;
             clip(clip: boolean): Camera;
             tags(tags: any /* TODO: fix type */): Camera;
+
+            finish(): widget.Camera;
         }
 
         interface Checkbox {
@@ -148,6 +162,8 @@ declare module "gridui" {
             checked(checked: boolean): Checkbox;
             color(color: string): Checkbox;
             text(text: string): Checkbox;
+
+            finish(): widget.Checkbox;
         }
 
         interface Circle {
@@ -159,6 +175,8 @@ declare module "gridui" {
             valueStart(valueStart: number): Circle;
             value(value: number): Circle;
             showValue(showValue: boolean): Circle;
+
+            finish(): widget.Circle;
         }
 
         interface Input {
@@ -166,21 +184,31 @@ declare module "gridui" {
             color(color: string): Input;
             type(type: string): Input;
             disabled(disabled: boolean): Input;
+
+            finish(): widget.Input;
         }
 
         interface Joystick {
             color(color: string): Joystick;
             keys(keys: string): Joystick;
             text(text: string): Joystick;
+
+            onPositionChanged(callback: (widget: widget.Joystick) => void): Joystick;
+
+            finish(): widget.Joystick;
         }
 
         interface Led {
             color(color: string): Led;
             on(on: boolean): Led;
+
+            finish(): widget.Led;
         }
 
         interface Orientation {
             color(color: string): Orientation;
+
+            finish(): widget.Orientation;
         }
 
         interface Select {
@@ -189,6 +217,8 @@ declare module "gridui" {
             disabled(disabled: boolean): Select;
             options(options: string): Select;
             selectedIndex(selectedIndex: number): Select;
+
+            finish(): widget.Select;
         }
 
         interface Slider {
@@ -199,6 +229,8 @@ declare module "gridui" {
             value(value: number): Slider;
             precision(precision: number): Slider;
             showValue(showValue: boolean): Slider;
+
+            finish(): widget.Slider;
         }
 
         interface SpinEdit {
@@ -207,6 +239,8 @@ declare module "gridui" {
             value(value: number): SpinEdit;
             step(step: number): SpinEdit;
             precision(precision: number): SpinEdit;
+
+            finish(): widget.SpinEdit;
         }
 
         interface Switcher {
@@ -215,6 +249,8 @@ declare module "gridui" {
             value(value: number): Switcher;
             min(min: number): Switcher;
             max(max: number): Switcher;
+
+            finish(): widget.Switcher;
         }
 
         interface Text {
@@ -226,6 +262,8 @@ declare module "gridui" {
             valign(valign: string): Text;
             prefix(prefix: string): Text;
             suffix(suffix: string): Text;
+
+            finish(): widget.Text;
         }
     }
 

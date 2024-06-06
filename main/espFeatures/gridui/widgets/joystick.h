@@ -37,12 +37,25 @@ class JoystickWidget {
         return jac::Value::from(ctx_, widget.text()).loot().second;
     }
 
+    static JSValue x(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Joystick*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.x()).loot().second;
+    }
+
+    static JSValue y(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Joystick*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.y()).loot().second;
+    }
+
 public:
     static jac::Object proto(jac::ContextRef ctx) {
         auto proto = jac::Object::create(ctx);
         defineWidgetProperty(ctx, proto, "color", "setColor", color, setColor);
         defineWidgetProperty(ctx, proto, "keys", "setKeys", keys, setKeys);
         defineWidgetProperty(ctx, proto, "text", "setText", text, setText);
+
+        defineWidgetPropertyReadOnly(ctx, proto, "x", x);
+        defineWidgetPropertyReadOnly(ctx, proto, "y", y);
         return proto;
     }
 };
