@@ -194,6 +194,7 @@ declare module "gridui" {
             text(text: string): Joystick;
 
             onPositionChanged(callback: (widget: widget.Joystick) => void): Joystick;
+            onClick(callback: (widget: widget.Joystick) => void): Joystick;
 
             finish(): widget.Joystick;
         }
@@ -297,4 +298,11 @@ declare module "gridui" {
      * Stop GridUI.
      */
     function end(): void;
+
+    /**
+     * Returns included GridUI version as number, to be compared with hex representation of the version.
+     * 
+     * For example, for version 5.1.0, do: `gridui.version() >= 0x050100`
+     */
+    function version(): number;
 }

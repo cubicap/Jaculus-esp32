@@ -20,9 +20,13 @@ class CameraBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("rotation", jac::Value(ctx, JS_NewCFunction(ctx, rotation, "rotation", 1)));
         proto.set("clip", jac::Value(ctx, JS_NewCFunction(ctx, clip, "clip", 1)));
+
         return proto;
     }
 };

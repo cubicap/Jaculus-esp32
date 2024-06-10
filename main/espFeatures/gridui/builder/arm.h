@@ -17,8 +17,15 @@ class ArmBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("info", jac::Value(ctx, JS_NewCFunction(ctx, info, "info", 1)));
+
+        defineBuilderCallback<builder::Arm, Arm, &builder::Arm::onGrab>(ctx, proto, "onGrab");
+        defineBuilderCallback<builder::Arm, Arm, &builder::Arm::onPositionChanged>(ctx, proto, "onPositionChanged");
+
         return proto;
     }
 };

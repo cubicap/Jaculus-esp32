@@ -16,8 +16,6 @@ class GridUiHolder {
     TaskHandle_t _webServerTask;
     std::unique_ptr<rb::Protocol> _protocol;
 
-    static void defaultOnPacketReceived(const std::string& cmd, rbjson::Object* pkt);
-
 public:
     GridUiHolder() : _webServerTask(nullptr) { }
 
@@ -51,6 +49,10 @@ public:
             _holder.begin(this->context(), ownerName, deviceName, builderCallback);
         })));
         griduiModule.addExport("end", ff.newFunction(noal::function(&GridUiHolder::end, &_holder)));
+
+        griduiModule.addExport("version", ff.newFunction(noal::function([](){
+            return RB_GRIDUI_VERSION;
+        })));
     }
 
     ~GridUiFeature() {

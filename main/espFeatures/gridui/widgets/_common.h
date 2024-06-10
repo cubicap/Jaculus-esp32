@@ -5,30 +5,7 @@
 
 namespace gridui_jac {
 
-using qjsGetter = JSValue(*)(JSContext* ctx_, JSValueConst thisVal);
-using qjsSetter = JSValue(*)(JSContext* ctx_, JSValueConst thisVal, JSValueConst val);
-
-static inline void defineWidgetProperty(jac::ContextRef ctx, jac::Object& target,
-    const char *name, const char *setterName,
-    qjsGetter getter, qjsSetter setter) {
-
-    auto jsGetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(getter)), name, 0, JS_CFUNC_getter, 0);
-    auto jsSetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(setter)), setterName, 1, JS_CFUNC_setter, 0);
-
-    JS_DefinePropertyGetSet(
-        ctx.get(), target.getVal(),
-        jac::Atom::create(ctx, name).get(), 
-        jsGetter, jsSetter, 0
-    );
-}
-
-static inline void defineWidgetPropertyReadOnly(jac::ContextRef ctx, jac::Object& target, const char *name, qjsGetter getter) {
-    auto jsGetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(getter)), name, 0, JS_CFUNC_getter, 0);
-    JS_DefineProperty(ctx, target.getVal(), jac::Atom::create(ctx, name).get(), JS_UNDEFINED, jsGetter, JS_UNDEFINED, JS_PROP_HAS_GET | JS_PROP_HAS_ENUMERABLE);
-    JS_FreeValue(ctx, jsGetter);
-}
-
-enum WidgetTypeId : uint16_t {
+enum class WidgetTypeId : uint16_t {
     Arm,
     Bar,
     Button,
@@ -78,7 +55,7 @@ public:
     }
 
     jac::Object buildObj(jac::ContextRef ctx, WidgetTypeId typeId, bool isBuilder, void *opaque, std::function<jac::Object(jac::ContextRef)> createNewProto) {
-        uint16_t cacheKey = typeId;
+        auto cacheKey = static_cast<uint16_t>(typeId);
         if(isBuilder) {
             cacheKey += _builderOffset;
         }
@@ -111,5 +88,47 @@ public:
         return itr->second;
     }
 };
+
+using qjsGetter = JSValue(*)(JSContext* ctx_, JSValueConst thisVal);
+using qjsSetter = JSValue(*)(JSContext* ctx_, JSValueConst thisVal, JSValueConst val);
+
+static inline void defineWidgetProperty(jac::ContextRef ctx, jac::Object& target,
+    const char *name, const char *setterName,
+    qjsGetter getter, qjsSetter setter) {
+
+    auto jsGetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(getter)), name, 0, JS_CFUNC_getter, 0);
+    auto jsSetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(setter)), setterName, 1, JS_CFUNC_setter, 0);
+
+    JS_DefinePropertyGetSet(
+        ctx.get(), target.getVal(),
+        jac::Atom::create(ctx, name).get(), 
+        jsGetter, jsSetter, 0
+    );
+}
+
+static inline void defineWidgetPropertyReadOnly(jac::ContextRef ctx, jac::Object& target, const char *name, qjsGetter getter) {
+    auto jsGetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(getter)), name, 0, JS_CFUNC_getter, 0);
+    JS_DefineProperty(ctx, target.getVal(), jac::Atom::create(ctx, name).get(), JS_UNDEFINED, jsGetter, JS_UNDEFINED, JS_PROP_HAS_GET | JS_PROP_HAS_ENUMERABLE);
+    JS_FreeValue(ctx, jsGetter);
+}
+
+template<typename BuilderT, typename WidgetT, auto setter>
+static JSValue builderCallbackImpl(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+    auto *builder = reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, 1));
+    auto callback = jac::Function(ctx_, JS_DupValue(ctx_, argv[0]));
+    (builder->*setter)([=](WidgetT& widget) {
+        const auto uuid = widget.uuid();
+        GridUiContext::get().scheduleEvent([=]() mutable {
+            auto obj = GridUiContext::get().getConstructedWidget(ctx_, uuid);
+            callback.call<void>(obj);
+        });
+    });
+    return JS_DupValue(ctx_, thisVal);
+}
+
+template<typename BuilderT, typename WidgetT, auto setter>
+static inline void defineBuilderCallback(jac::ContextRef ctx, jac::Object& target, const char *name) {
+    target.set(name, jac::Value(ctx, JS_NewCFunction(ctx, &builderCallbackImpl<BuilderT, WidgetT, setter>, name, 1)));
+}
 
 };

@@ -54,6 +54,13 @@ class GridUiBuilderProtoBuilder : public jac::ProtoBuilder::Opaque<GridUiHolder>
         return obj.loot().second;
     }
 
+    template<typename BuilderT>
+    static JSValue css(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& builder = *reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, 1));
+        builder.css(jac::ValueWeak(ctx_, argv[0]).to<std::string>(), jac::ValueWeak(ctx_, argv[1]).to<std::string>());
+        return JS_DupValue(ctx_, thisVal);
+    }
+
 public:
     static void destroyOpaque(JSRuntime* rt, GridUiHolder* ptr) noexcept { }
 
@@ -76,6 +83,7 @@ public:
 
         auto obj = GridUiContext::get().buildObj(ctx, typeId, true, widget, [](jac::ContextRef ctx) {
             auto proto = getProtoBuilder(ctx);
+            proto.set("css", jac::Value(ctx, JS_NewCFunction(ctx, css<BuilderT>, "css", 2)));
             proto.set("finish", jac::Value(ctx, JS_NewCFunction(ctx, finish<typeId, BuilderT, WidgetT, getProtoWidget>, "finish", 0)));
             return proto;
         });
@@ -104,13 +112,6 @@ public:
     }
 };
 
-void GridUiHolder::defaultOnPacketReceived(const std::string& cmd, rbjson::Object* pkt) {
-    // Let GridUI handle its packets
-    if (gridui::UI.handleRbPacket(cmd, pkt))
-        return;
-    // ignore the rest
-}
-
 void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::string deviceName, jac::Function builderCallback) {
     using namespace gridui;
     if(_webServerTask) {
@@ -127,7 +128,13 @@ void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::st
 
     rb_web_set_not_found_callback(gridui::webserverNotFoundCallback);
 
-    _protocol.reset(new rb::Protocol("FrantaFlinta", "Jaculus-test", "Compiled at " __DATE__ " " __TIME__, defaultOnPacketReceived));
+    _protocol.reset(
+        new rb::Protocol("FrantaFlinta", "Jaculus-test", "Compiled at " __DATE__ " " __TIME__,
+            [](const std::string& cmd, rbjson::Object* pkt) {
+                UI.handleRbPacket(cmd, pkt);
+            }
+        )
+    );
     _protocol->start();
 
     UI.begin(_protocol.get());
