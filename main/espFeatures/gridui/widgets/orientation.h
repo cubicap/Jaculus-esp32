@@ -17,10 +17,40 @@ class OrientationWidget {
         return jac::Value::from(ctx_, widget.color()).loot().second;
     }
 
+    static JSValue yaw(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Orientation*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.yaw()).loot().second;
+    }
+
+    static JSValue pitch(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Orientation*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.pitch()).loot().second;
+    }
+
+    static JSValue roll(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Orientation*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.roll()).loot().second;
+    }
+
+    static JSValue joystickX(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Orientation*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.joystickX()).loot().second;
+    }
+
+    static JSValue joystickY(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Orientation*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.joystickY()).loot().second;
+    }
+
 public:
     static jac::Object proto(jac::ContextRef ctx) {
         auto proto = jac::Object::create(ctx);
         defineWidgetProperty(ctx, proto, "color", "setColor", color, setColor);
+        defineWidgetPropertyReadOnly(ctx, proto, "yaw", yaw);
+        defineWidgetPropertyReadOnly(ctx, proto, "pitch", pitch);
+        defineWidgetPropertyReadOnly(ctx, proto, "roll", roll);
+        defineWidgetPropertyReadOnly(ctx, proto, "joystickX", joystickX);
+        defineWidgetPropertyReadOnly(ctx, proto, "joystickY", joystickY);
         return proto;
     }
 };

@@ -2,10 +2,14 @@
 
 #include <jac/machine/values.h>
 #include <map>
+#include <functional>
+#include <atomic>
 
 namespace gridui_jac {
 
 enum class WidgetTypeId : uint16_t {
+    Base,
+
     Arm,
     Bar,
     Button,
@@ -42,16 +46,33 @@ public:
     }
 
     void scheduleEvent(std::function<void()> event) {
-        _scheduleEvent(event);
+        if(_scheduleEvent) {
+            _scheduleEvent(event);
+        }
     }
 
     void clear() {
-        _protoCache.clear();
+        clearProtos();
         _constructedWidgets.clear();
     }
 
     void clearProtos() {
         _protoCache.clear();
+    }
+
+    jac::Object getProto(jac::ContextRef ctx, WidgetTypeId typeId, bool isBuilder, std::function<jac::Object(jac::ContextRef)> createNewProto) {
+        auto cacheKey = static_cast<uint16_t>(typeId);
+        if(isBuilder) {
+            cacheKey += _builderOffset;
+        }
+        auto itr = _protoCache.find(cacheKey);
+        if(itr != _protoCache.end()) {
+            return itr->second;
+        }
+
+        auto proto = createNewProto(ctx);
+        _protoCache.emplace(cacheKey, proto);
+        return proto;
     }
 
     jac::Object buildObj(jac::ContextRef ctx, WidgetTypeId typeId, bool isBuilder, void *opaque, std::function<jac::Object(jac::ContextRef)> createNewProto) {
@@ -62,15 +83,7 @@ public:
 
         auto obj = jac::Object::create(ctx);
         JS_SetOpaque(obj.getVal(), opaque);
-
-        auto itr = _protoCache.find(cacheKey);
-        if(itr == _protoCache.end()) {
-            auto proto = createNewProto(ctx);
-            _protoCache.emplace(cacheKey, proto);
-            obj.setPrototype(proto);
-        } else {
-            obj.setPrototype(itr->second);
-        }
+        obj.setPrototype(getProto(ctx, typeId, isBuilder, createNewProto));
 
         if(!isBuilder) {
             auto widget = reinterpret_cast<gridui::Widget*>(opaque);
@@ -116,9 +129,10 @@ template<typename BuilderT, typename WidgetT, auto setter>
 static JSValue builderCallbackImpl(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
     auto *builder = reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, 1));
     auto callback = jac::Function(ctx_, JS_DupValue(ctx_, argv[0]));
-    (builder->*setter)([=](WidgetT& widget) {
+
+    (builder->*setter)([ctx_, callback](WidgetT& widget) {
         const auto uuid = widget.uuid();
-        GridUiContext::get().scheduleEvent([=]() mutable {
+        GridUiContext::get().scheduleEvent([ctx_, callback, uuid]() mutable {
             auto obj = GridUiContext::get().getConstructedWidget(ctx_, uuid);
             callback.call<void>(obj);
         });

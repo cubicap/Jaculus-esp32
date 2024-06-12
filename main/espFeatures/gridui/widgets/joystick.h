@@ -53,7 +53,6 @@ public:
         defineWidgetProperty(ctx, proto, "color", "setColor", color, setColor);
         defineWidgetProperty(ctx, proto, "keys", "setKeys", keys, setKeys);
         defineWidgetProperty(ctx, proto, "text", "setText", text, setText);
-
         defineWidgetPropertyReadOnly(ctx, proto, "x", x);
         defineWidgetPropertyReadOnly(ctx, proto, "y", y);
         return proto;

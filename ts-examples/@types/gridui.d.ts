@@ -1,9 +1,22 @@
 declare module "gridui" {
     namespace widget {
-        interface Arm {
+        interface Base {
+          readonly uuid: number
+          widgetX: number
+          widgetY: number
+          widgetW: number
+          widgetH: number
+          widgetTab: number
+          css(key: string): string
+          setCss(key: string, value: string): void
+        }
+      
+        interface Arm extends Base {
+            readonly x: number
+            readonly y: number
         }
 
-        interface Bar {
+        interface Bar extends Base {
             color: string
             fontSize: number
             min: number
@@ -12,7 +25,7 @@ declare module "gridui" {
             showValue: boolean
         }
 
-        interface Button {
+        interface Button extends Base {
             text: string
             fontSize: number
             color: string
@@ -20,21 +33,22 @@ declare module "gridui" {
             align: string
             valign: string
             disabled: boolean
+            readonly pressed: boolean
         }
 
-        interface Camera {
+        interface Camera extends Base {
             rotation: number
             clip: boolean
         }
 
-        interface Checkbox {
+        interface Checkbox extends Base {
             fontSize: number
             checked: boolean
             color: string
             text: string
         }
 
-        interface Circle {
+        interface Circle extends Base {
             color: string
             fontSize: number
             min: number
@@ -45,32 +59,36 @@ declare module "gridui" {
             showValue: boolean
         }
 
-        interface Input {
+        interface Input extends Base {
             text: string
             color: string
             type: string
             disabled: boolean
         }
 
-        interface Joystick {
+        interface Joystick extends Base {
             color: string
             keys: string
             text: string
-
-            x: number;
-            y: number;
+            readonly x: number
+            readonly y: number
         }
 
-        interface Led {
+        interface Led extends Base {
             color: string
             on: boolean
         }
 
-        interface Orientation {
+        interface Orientation extends Base {
             color: string
+            readonly yaw: number
+            readonly pitch: number
+            readonly roll: number
+            readonly joystickX: number
+            readonly joystickY: number
         }
 
-        interface Select {
+        interface Select extends Base {
             color: string
             background: string
             disabled: boolean
@@ -78,7 +96,7 @@ declare module "gridui" {
             selectedIndex: number
         }
 
-        interface Slider {
+        interface Slider extends Base {
             color: string
             fontSize: number
             min: number
@@ -88,7 +106,7 @@ declare module "gridui" {
             showValue: boolean
         }
 
-        interface SpinEdit {
+        interface SpinEdit extends Base {
             fontSize: number
             color: string
             value: number
@@ -96,7 +114,7 @@ declare module "gridui" {
             precision: number
         }
 
-        interface Switcher {
+        interface Switcher extends Base {
             fontSize: number
             color: string
             value: number
@@ -104,7 +122,7 @@ declare module "gridui" {
             max: number
         }
 
-        interface Text {
+        interface Text extends Base {
             text: string
             fontSize: number
             color: string
@@ -117,173 +135,166 @@ declare module "gridui" {
     }
 
     namespace builder {
-        interface Arm {
-            info(info: Record<string, any>): Arm;
-
-            finish(): widget.Arm;
+        interface Base {
+            css(key: string, value: string): this
+            finish(): this
         }
 
-        interface Bar {
-            color(color: string): Bar;
-            fontSize(fontSize: number): Bar;
-            min(min: number): Bar;
-            max(max: number): Bar;
-            value(value: number): Bar;
-            showValue(showValue: boolean): Bar;
+        interface Arm extends Base {
+            info(info: Record<string, any>): Arm
 
-            finish(): widget.Bar;
+            onGrab(callback: (arm: widget.Arm) => void): Arm
+            onPositionChanged(callback: (arm: widget.Arm) => void): Arm
         }
 
-        interface Button {
-            text(text: string): Button;
-            fontSize(fontSize: number): Button;
-            color(color: string): Button;
-            background(background: string): Button;
-            align(align: string): Button;
-            valign(valign: string): Button;
-            disabled(disabled: boolean): Button;
-
-            onPress(callback: (widget: widget.Button) => void): Button;
-            onRelease(callback: (widget: widget.Button) => void): Button;
-
-            finish(): widget.Button;
+        interface Bar extends Base {
+            color(color: string): Bar
+            fontSize(fontSize: number): Bar
+            min(min: number): Bar
+            max(max: number): Bar
+            value(value: number): Bar
+            showValue(showValue: boolean): Bar
         }
 
-        interface Camera {
-            rotation(rotation: number): Camera;
-            clip(clip: boolean): Camera;
-            tags(tags: any /* TODO: fix type */): Camera;
+        interface Button extends Base {
+            text(text: string): Button
+            fontSize(fontSize: number): Button
+            color(color: string): Button
+            background(background: string): Button
+            align(align: string): Button
+            valign(valign: string): Button
+            disabled(disabled: boolean): Button
 
-            finish(): widget.Camera;
+            onPress(callback: (button: widget.Button) => void): Button
+            onRelease(callback: (button: widget.Button) => void): Button
         }
 
-        interface Checkbox {
-            fontSize(fontSize: number): Checkbox;
-            checked(checked: boolean): Checkbox;
-            color(color: string): Checkbox;
-            text(text: string): Checkbox;
-
-            finish(): widget.Checkbox;
+        interface Camera extends Base {
+            rotation(rotation: number): Camera
+            clip(clip: boolean): Camera
+            tags(tags: any /* TODO: fix type */): Camera
         }
 
-        interface Circle {
-            color(color: string): Circle;
-            fontSize(fontSize: number): Circle;
-            min(min: number): Circle;
-            max(max: number): Circle;
-            lineWidth(lineWidth: number): Circle;
-            valueStart(valueStart: number): Circle;
-            value(value: number): Circle;
-            showValue(showValue: boolean): Circle;
+        interface Checkbox extends Base {
+            fontSize(fontSize: number): Checkbox
+            checked(checked: boolean): Checkbox
+            color(color: string): Checkbox
+            text(text: string): Checkbox
 
-            finish(): widget.Circle;
+            onChanged(callback: (checkbox: widget.Checkbox) => void): Checkbox
         }
 
-        interface Input {
-            text(text: string): Input;
-            color(color: string): Input;
-            type(type: string): Input;
-            disabled(disabled: boolean): Input;
-
-            finish(): widget.Input;
+        interface Circle extends Base {
+            color(color: string): Circle
+            fontSize(fontSize: number): Circle
+            min(min: number): Circle
+            max(max: number): Circle
+            lineWidth(lineWidth: number): Circle
+            valueStart(valueStart: number): Circle
+            value(value: number): Circle
+            showValue(showValue: boolean): Circle
         }
 
-        interface Joystick {
-            color(color: string): Joystick;
-            keys(keys: string): Joystick;
-            text(text: string): Joystick;
+        interface Input extends Base {
+            text(text: string): Input
+            color(color: string): Input
+            type(type: string): Input
+            disabled(disabled: boolean): Input
 
-            onPositionChanged(callback: (widget: widget.Joystick) => void): Joystick;
-            onClick(callback: (widget: widget.Joystick) => void): Joystick;
-
-            finish(): widget.Joystick;
+            onChanged(callback: (input: widget.Input) => void): Input
         }
 
-        interface Led {
-            color(color: string): Led;
-            on(on: boolean): Led;
+        interface Joystick extends Base {
+            color(color: string): Joystick
+            keys(keys: string): Joystick
+            text(text: string): Joystick
 
-            finish(): widget.Led;
+            onClick(callback: (joystick: widget.Joystick) => void): Joystick
+            onPositionChanged(callback: (joystick: widget.Joystick) => void): Joystick
         }
 
-        interface Orientation {
-            color(color: string): Orientation;
-
-            finish(): widget.Orientation;
+        interface Led extends Base {
+            color(color: string): Led
+            on(on: boolean): Led
         }
 
-        interface Select {
-            color(color: string): Select;
-            background(background: string): Select;
-            disabled(disabled: boolean): Select;
-            options(options: string): Select;
-            selectedIndex(selectedIndex: number): Select;
+        interface Orientation extends Base {
+            color(color: string): Orientation
 
-            finish(): widget.Select;
+            onPositionChanged(callback: (orientation: widget.Orientation) => void): Orientation
         }
 
-        interface Slider {
-            color(color: string): Slider;
-            fontSize(fontSize: number): Slider;
-            min(min: number): Slider;
-            max(max: number): Slider;
-            value(value: number): Slider;
-            precision(precision: number): Slider;
-            showValue(showValue: boolean): Slider;
+        interface Select extends Base {
+            color(color: string): Select
+            background(background: string): Select
+            disabled(disabled: boolean): Select
+            options(options: string): Select
+            selectedIndex(selectedIndex: number): Select
 
-            finish(): widget.Slider;
+            onChanged(callback: (select: widget.Select) => void): Select
         }
 
-        interface SpinEdit {
-            fontSize(fontSize: number): SpinEdit;
-            color(color: string): SpinEdit;
-            value(value: number): SpinEdit;
-            step(step: number): SpinEdit;
-            precision(precision: number): SpinEdit;
+        interface Slider extends Base {
+            color(color: string): Slider
+            fontSize(fontSize: number): Slider
+            min(min: number): Slider
+            max(max: number): Slider
+            value(value: number): Slider
+            precision(precision: number): Slider
+            showValue(showValue: boolean): Slider
 
-            finish(): widget.SpinEdit;
+            onChanged(callback: (slider: widget.Slider) => void): Slider
         }
 
-        interface Switcher {
-            fontSize(fontSize: number): Switcher;
-            color(color: string): Switcher;
-            value(value: number): Switcher;
-            min(min: number): Switcher;
-            max(max: number): Switcher;
+        interface SpinEdit extends Base {
+            fontSize(fontSize: number): SpinEdit
+            color(color: string): SpinEdit
+            value(value: number): SpinEdit
+            step(step: number): SpinEdit
+            precision(precision: number): SpinEdit
 
-            finish(): widget.Switcher;
+            onChanged(callback: (spinEdit: widget.SpinEdit) => void): SpinEdit
         }
 
-        interface Text {
-            text(text: string): Text;
-            fontSize(fontSize: number): Text;
-            color(color: string): Text;
-            background(background: string): Text;
-            align(align: string): Text;
-            valign(valign: string): Text;
-            prefix(prefix: string): Text;
-            suffix(suffix: string): Text;
+        interface Switcher extends Base {
+            fontSize(fontSize: number): Switcher
+            color(color: string): Switcher
+            value(value: number): Switcher
+            min(min: number): Switcher
+            max(max: number): Switcher
 
-            finish(): widget.Text;
+            onChanged(callback: (switcher: widget.Switcher) => void): Switcher
+        }
+
+        interface Text extends Base {
+            text(text: string): Text
+            fontSize(fontSize: number): Text
+            color(color: string): Text
+            background(background: string): Text
+            align(align: string): Text
+            valign(valign: string): Text
+            prefix(prefix: string): Text
+            suffix(suffix: string): Text
         }
     }
 
     class Builder {
-        arm(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Arm;
-        bar(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Bar;
-        button(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Button;
-        camera(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Camera;
-        checkbox(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Checkbox;
-        circle(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Circle;
-        input(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Input;
-        joystick(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Joystick;
-        led(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Led;
-        orientation(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Orientation;
-        select(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Select;
-        slider(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Slider;
-        spinEdit(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.SpinEdit;
-        switcher(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Switcher;
-        text(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Text;
+        arm(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Arm
+        bar(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Bar
+        button(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Button
+        camera(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Camera
+        checkbox(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Checkbox
+        circle(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Circle
+        input(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Input
+        joystick(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Joystick
+        led(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Led
+        orientation(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Orientation
+        select(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Select
+        slider(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Slider
+        spinEdit(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.SpinEdit
+        switcher(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Switcher
+        text(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Text
+        widget(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Widget
     }
 
     /**
@@ -292,17 +303,17 @@ declare module "gridui" {
      * @param deviceName name of this device, visible in the RBController app.
      * @param builderCallback callback, which receives the builder instance that can be used to create widgets.
      */
-    function begin(ownerName: string, deviceName: string, builderCallback: (builder: Builder) => void): void;
+    function begin(ownerName: string, deviceName: string, builderCallback: (builder: Builder) => void): void
 
     /**
      * Stop GridUI.
      */
-    function end(): void;
+    function end(): void
 
     /**
      * Returns included GridUI version as number, to be compared with hex representation of the version.
      * 
      * For example, for version 5.1.0, do: `gridui.version() >= 0x050100`
      */
-    function version(): number;
+    function version(): number
 }

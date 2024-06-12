@@ -7,74 +7,86 @@
 namespace gridui_jac {
 
 class BaseWidget {
-    static JSValue setColor(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
+    static JSValue uuid(JSContext* ctx_, JSValueConst thisVal) {
         auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
-        return JS_UNDEFINED;
-    }
-    static JSValue color(JSContext* ctx_, JSValueConst thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        return jac::Value::from(ctx_, widget.color()).loot().second;
+        return jac::Value::from(ctx_, widget.uuid()).loot().second;
     }
 
-    static JSValue setFontSize(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        widget.setFontSize(jac::ValueWeak(ctx_, val).to<float>());
+    static JSValue setWidgetX(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        widget.setWidgetX(jac::ValueWeak(ctx_, val).to<float>());
         return JS_UNDEFINED;
     }
-    static JSValue fontSize(JSContext* ctx_, JSValueConst thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        return jac::Value::from(ctx_, widget.fontSize()).loot().second;
+    static JSValue widgetX(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.widgetX()).loot().second;
     }
 
-    static JSValue setMin(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        widget.setMin(jac::ValueWeak(ctx_, val).to<float>());
+    static JSValue setWidgetY(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        widget.setWidgetY(jac::ValueWeak(ctx_, val).to<float>());
         return JS_UNDEFINED;
     }
-    static JSValue min(JSContext* ctx_, JSValueConst thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        return jac::Value::from(ctx_, widget.min()).loot().second;
+    static JSValue widgetY(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.widgetY()).loot().second;
     }
 
-    static JSValue setMax(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        widget.setMax(jac::ValueWeak(ctx_, val).to<float>());
+    static JSValue setWidgetW(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        widget.setWidgetW(jac::ValueWeak(ctx_, val).to<float>());
         return JS_UNDEFINED;
     }
-    static JSValue max(JSContext* ctx_, JSValueConst thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        return jac::Value::from(ctx_, widget.max()).loot().second;
+    static JSValue widgetW(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.widgetW()).loot().second;
     }
 
-    static JSValue setValue(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        widget.setValue(jac::ValueWeak(ctx_, val).to<float>());
+    static JSValue setWidgetH(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        widget.setWidgetH(jac::ValueWeak(ctx_, val).to<float>());
         return JS_UNDEFINED;
     }
-    static JSValue value(JSContext* ctx_, JSValueConst thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        return jac::Value::from(ctx_, widget.value()).loot().second;
+    static JSValue widgetH(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.widgetH()).loot().second;
     }
 
-    static JSValue setShowValue(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        widget.setShowValue(jac::ValueWeak(ctx_, val).to<bool>());
+    static JSValue setWidgetTab(JSContext* ctx_, JSValueConst thisVal, JSValueConst val) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        widget.setWidgetTab(jac::ValueWeak(ctx_, val).to<float>());
         return JS_UNDEFINED;
     }
-    static JSValue showValue(JSContext* ctx_, JSValueConst thisVal) {
-        auto& widget = *reinterpret_cast<gridui::Bar*>(JS_GetOpaque(thisVal, 1));
-        return jac::Value::from(ctx_, widget.showValue()).loot().second;
+    static JSValue widgetTab(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.widgetTab()).loot().second;
+    }
+
+    static JSValue css(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        auto val = widget.css(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
+        return jac::Value::from(ctx_, val).loot().second;
+    }
+    static JSValue setCss(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+        auto& widget = *reinterpret_cast<gridui::Widget*>(JS_GetOpaque(thisVal, 1));
+        auto key = jac::ValueWeak(ctx_, argv[0]).to<std::string>();
+        auto val = jac::ValueWeak(ctx_, argv[1]).to<std::string>();
+        widget.setCss(key, val);
+        return JS_UNDEFINED;
     }
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
         auto proto = jac::Object::create(ctx);
-        defineWidgetProperty(ctx, proto, "color", "setColor", color, setColor);
-        defineWidgetProperty(ctx, proto, "fontSize", "setFontSize", fontSize, setFontSize);
-        defineWidgetProperty(ctx, proto, "min", "setMin", min, setMin);
-        defineWidgetProperty(ctx, proto, "max", "setMax", max, setMax);
-        defineWidgetProperty(ctx, proto, "value", "setValue", value, setValue);
-        defineWidgetProperty(ctx, proto, "showValue", "setShowValue", showValue, setShowValue);
+        defineWidgetPropertyReadOnly(ctx, proto, "uuid", uuid);
+        defineWidgetProperty(ctx, proto, "widgetX", "setWidgetX", widgetX, setWidgetX);
+        defineWidgetProperty(ctx, proto, "widgetY", "setWidgetY", widgetY, setWidgetY);
+        defineWidgetProperty(ctx, proto, "widgetW", "setWidgetW", widgetW, setWidgetW);
+        defineWidgetProperty(ctx, proto, "widgetH", "setWidgetH", widgetH, setWidgetH);
+        defineWidgetProperty(ctx, proto, "widgetTab", "setWidgetTab", widgetTab, setWidgetTab);
+
+        proto.set("css", jac::Value(ctx, JS_NewCFunction(ctx, css, "css", 1)));
+        proto.set("setCss", jac::Value(ctx, JS_NewCFunction(ctx, setCss, "setCss", 2)));
         return proto;
     }
 };

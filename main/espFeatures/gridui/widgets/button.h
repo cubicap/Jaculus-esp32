@@ -77,6 +77,11 @@ class ButtonWidget {
         return jac::Value::from(ctx_, widget.disabled()).loot().second;
     }
 
+    static JSValue pressed(JSContext* ctx_, JSValueConst thisVal) {
+        auto& widget = *reinterpret_cast<gridui::Button*>(JS_GetOpaque(thisVal, 1));
+        return jac::Value::from(ctx_, widget.pressed()).loot().second;
+    }
+
 public:
     static jac::Object proto(jac::ContextRef ctx) {
         auto proto = jac::Object::create(ctx);
@@ -87,6 +92,7 @@ public:
         defineWidgetProperty(ctx, proto, "align", "setAlign", align, setAlign);
         defineWidgetProperty(ctx, proto, "valign", "setValign", valign, setValign);
         defineWidgetProperty(ctx, proto, "disabled", "setDisabled", disabled, setDisabled);
+        defineWidgetPropertyReadOnly(ctx, proto, "pressed", pressed);
         return proto;
     }
 };

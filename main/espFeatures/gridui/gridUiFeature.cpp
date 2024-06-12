@@ -19,6 +19,8 @@
 #include "./builder/switcher.h"
 #include "./builder/text.h"
 
+#include "./widgets/base.h"
+
 #include "./widgets/arm.h"
 #include "./widgets/bar.h"
 #include "./widgets/button.h"
@@ -50,7 +52,13 @@ class GridUiBuilderProtoBuilder : public jac::ProtoBuilder::Opaque<GridUiHolder>
 
         auto widget = new WidgetT(std::move(builder.finish()));
 
-        auto obj = GridUiContext::get().buildObj(ctx_, typeId, false, widget, getProtoWidget);
+        auto obj = GridUiContext::get().buildObj(ctx_, typeId, false, widget, [](jac::ContextRef ctx) {
+            auto baseProto = GridUiContext::get().getProto(ctx, WidgetTypeId::Base, false, BaseWidget::proto);
+            auto proto = getProtoWidget(ctx);
+            proto.setPrototype(baseProto);
+            return proto;
+        });
+
         return obj.loot().second;
     }
 
@@ -70,16 +78,14 @@ public:
             throw jac::Exception::create(jac::Exception::Type::TypeError, "expected at least 4 arguments");
         }
 
-        uint16_t uuid = 0;
-        uint16_t tab = 0;
-        if(args.size() >= 5) {
-            uuid = args[4].to<uint16_t>();
-        }
-        if(args.size() >= 6) {
-            tab = args[5].to<uint16_t>();
-        }
+        auto x = args[0].to<float>();
+        auto y = args[1].to<float>();
+        auto w = args[2].to<float>();
+        auto h = args[3].to<float>();
+        uint16_t uuid = args.size() >= 5 ? args[4].to<uint16_t>() : 0;
+        uint16_t tab = args.size() >= 6 ? args[5].to<uint16_t>() : 0;
 
-        auto widget = gridui::UI.newWidget<BuilderT>(args[0].to<float>(), args[1].to<float>(), args[2].to<float>(), args[3].to<float>(), uuid, tab);
+        auto widget = gridui::UI.newWidget<BuilderT>(x, y, w, h, uuid, tab);
 
         auto obj = GridUiContext::get().buildObj(ctx, typeId, true, widget, [](jac::ContextRef ctx) {
             auto proto = getProtoBuilder(ctx);
