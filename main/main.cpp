@@ -26,6 +26,7 @@
 #include "espFeatures/timestampFeature.h"
 
 #include "platform/espNvsKeyValue.h"
+#include "platform/espWifi.h"
 
 #include "util/uartStream.h"
 
@@ -108,15 +109,7 @@ jac::Device<Machine> device(
     { // resources
         {"ts-examples", resources::tsExamplesTgz}
     },
-    [](const std::string& nsname) { // openKeyValue
-        nvs_handle_t handle;
-        auto err = nvs_open(nsname.c_str(), NVS_READWRITE, &handle);
-        if(err != ESP_OK) {
-            jac::Logger::error("Failed to open NVS namespace " + nsname + ": "+ std::string(esp_err_to_name(err)));
-            return std::unique_ptr<EspNvsKeyValue>();
-        }
-        return std::make_unique<EspNvsKeyValue>(handle);
-    }
+    EspNvsKeyValue::open
 );
 
 using Mux_t = jac::Mux<jac::CobsEncoder>;
@@ -195,7 +188,6 @@ int main() {
     muxJtag->bindRx(std::make_unique<decltype(handleUsb)>(std::move(handleUsb)));
 #endif
 
-
     device.onConfigureMachine([&](Machine &machine) {
         device.machineIO().in->clear();
 
@@ -213,6 +205,10 @@ int main() {
     cfg.stack_size = 10 * 1024;
     cfg.inherit_cfg = true;
     esp_pthread_set_cfg(&cfg);
+
+    auto *wifi = new EspWifiController();
+    wifi->initialize();
+    device.onKeyValueModified(std::bind(&EspWifiController::onKeyValueModified, wifi, std::placeholders::_1, std::placeholders::_2));
 
     device.start();
 

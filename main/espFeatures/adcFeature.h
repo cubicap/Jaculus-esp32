@@ -34,7 +34,7 @@ class AdcFeature : public Next {
                 throw std::runtime_error(esp_err_to_name(err));
             }
 
-            err = adc1_config_channel_atten(static_cast<adc1_channel_t>(channel), ADC_ATTEN_DB_11);
+            err = adc1_config_channel_atten(static_cast<adc1_channel_t>(channel), ADC_ATTEN_DB_12);
             if (err != ESP_OK) {
                 throw std::runtime_error(esp_err_to_name(err));
             }
