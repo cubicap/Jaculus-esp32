@@ -3,7 +3,7 @@ dependencies:
   jac-dcore:
     path: src
     git: https://github.com/cubicap/Jaculus-dcore.git
-    version: v0.0.12
+    version: v0.0.13
   simple-radio:
     git: https://github.com/RoboticsBrno/Esp32-simple-radio.git
     version: v1.2.1
