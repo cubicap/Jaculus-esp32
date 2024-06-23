@@ -25,6 +25,8 @@
 #include "espFeatures/pulseCounterFeature.h"
 #include "espFeatures/timestampFeature.h"
 
+#include "platform/espNvsKeyValue.h"
+
 #include "util/uartStream.h"
 
 #include "resources/resources.h"
@@ -34,6 +36,7 @@
 #include <sstream>
 
 #include "esp_vfs_fat.h"
+#include "nvs_flash.h"
 #include "freertos/task.h"
 
 #include "esp_pthread.h"
@@ -102,8 +105,17 @@ jac::Device<Machine> device(
         }
         esp_partition_erase_range(partition, 0, partition->size);
     },
-    {
+    { // resources
         {"ts-examples", resources::tsExamplesTgz}
+    },
+    [](const std::string& nsname) { // openKeyValue
+        nvs_handle_t handle;
+        auto err = nvs_open(nsname.c_str(), NVS_READWRITE, &handle);
+        if(err != ESP_OK) {
+            jac::Logger::error("Failed to open NVS namespace " + nsname + ": "+ std::string(esp_err_to_name(err)));
+            return std::unique_ptr<EspNvsKeyValue>();
+        }
+        return std::make_unique<EspNvsKeyValue>(handle);
     }
 );
 
@@ -152,6 +164,16 @@ int main() {
     };
 
     ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl("/data", "storage", &conf, &storage_wl_handle));
+
+    // Initialize nvs
+    auto err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        err = nvs_flash_erase();
+        if (err == ESP_OK) {
+            err = nvs_flash_init();
+        }
+    }
+    ESP_ERROR_CHECK(err);
 
     // initialize uart connection
     auto uartStream = std::make_unique<UartStream>(UART_NUM_0, 921600, 4096, 0);
