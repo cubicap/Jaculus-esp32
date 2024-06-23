@@ -92,6 +92,7 @@ public:
         pcnt_unit_config_t unitConfig = {
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),
+            .intr_priority = 0,
             .flags = { 0 }
         };
         unitConfig.flags.accum_count = 0;
