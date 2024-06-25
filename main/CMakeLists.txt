@@ -12,8 +12,3 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE JAC_ESP32_VERSION="${JAC_ESP
 
 add_subdirectory(resources)
 target_link_libraries(${COMPONENT_LIB} PRIVATE resources)
-
-if(${ESP_PLATFORM})
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mlongcalls -mtext-section-literals")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlongcalls -mtext-section-literals")
-endif()
