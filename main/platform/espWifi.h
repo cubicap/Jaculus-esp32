@@ -6,10 +6,10 @@
 #include "esp_timer.h"
 #include "esp_wifi.h"
 
-#include "espNvsKeyValue.h"
-
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+
+#include "espNvsKeyValue.h"
 
 class EspWifiController {
 private:
@@ -28,10 +28,12 @@ private:
         SPECIFIC_SSID,
     };
 
+    EspWifiController();
     EspWifiController(EspWifiController&) = delete;
 
     Mode _mode;
     StaMode _staMode;
+    esp_ip4_addr_t _currentIp;
 
     bool _eventLoopOurs;
     esp_event_handler_instance_t _handler_wifi;
@@ -58,9 +60,28 @@ private:
         int32_t event_id, void* event_data);
 
 public:
-    EspWifiController();
+    static constexpr const char *KvNsWifiSsid = "wifi_net";
+    static constexpr const char *KvNsWifiMain = "wifi_cfg";
+    static constexpr const char *KeyWifiMode = "mode";
+    static constexpr const char *KeyWifiStaMode = "sta_mode";
+    static constexpr const char *KeyWifiStaSpecific = "sta_ssid";
+    static constexpr const char *KeyWifiApSsid = "ap_ssid";
+    static constexpr const char *KeyWifiApPass = "ap_pass";
+    static constexpr const char *KeyWifiCurrentIp = "current_ip"; // "fake" key that is actually only ever in memory
+
+    static EspWifiController& get() {
+        static EspWifiController instance;
+        return instance;
+    }
 
     bool initialize();
 
     void onKeyValueModified(const std::string& nsname, const std::string& key);
+
+    esp_ip4_addr_t currentIp() const { return _currentIp; }
+    std::string currentIpStr() const {
+        char buf[16];
+        esp_ip4addr_ntoa(&_currentIp, buf, sizeof(buf));
+        return buf;
+    }
 };

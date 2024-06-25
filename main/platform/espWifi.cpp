@@ -2,18 +2,10 @@
 #include "esp_netif.h"
 #include "espWifi.h"
 
-static constexpr const char *KvNsWifiSsid = "wifi_net";
-static constexpr const char *KvNsWifiMain = "wifi_cfg";
-
-static constexpr const char *KeyWifiMode = "mode";
-static constexpr const char *KeyWifiStaMode = "sta_mode";
-static constexpr const char *KeyWifiStaSpecific = "sta_ssid";
-static constexpr const char *KeyWifiApSsid = "ap_ssid";
-static constexpr const char *KeyWifiApPass = "ap_pass";
-
 EspWifiController::EspWifiController() :
         _mode(Mode::DISABLED),
         _staMode(StaMode::BEST_SIGNAL),
+        _currentIp({}),
         _eventLoopOurs(false),
         _handler_wifi(nullptr),
         _handler_ip(nullptr),
@@ -136,6 +128,8 @@ void EspWifiController::stopWifiLocked() {
     vSemaphoreDelete(stopSem);
 
     _netIf.reset();
+
+    _currentIp.addr = 0;
 }
 
 void EspWifiController::deinitGlobalsLocked() {
@@ -322,6 +316,13 @@ void EspWifiController::eventHandlerWifi(void* selfVoid, esp_event_base_t event_
             }
             break;
         }
+        case WIFI_EVENT_AP_START: {
+            std::lock_guard<std::mutex> lg(self->_modeLock);
+            esp_netif_ip_info_t ip_info = {};
+            esp_netif_get_ip_info(self->_netIf.get(), &ip_info);
+            self->_currentIp = ip_info.ip;
+            break;
+        }
         case WIFI_EVENT_SCAN_DONE: {
             std::lock_guard<std::mutex> lg(self->_modeLock);
 
@@ -386,11 +387,13 @@ void EspWifiController::eventHandlerWifiStop(void* semVoid, esp_event_base_t eve
 
 void EspWifiController::eventHandlerIp(void* selfVoid, esp_event_base_t event_base,
         int32_t event_id, void* event_data) {
+    auto *self = (EspWifiController*)selfVoid;
 
     ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
 
+    self->_currentIp = event->ip_info.ip;
+
     char buf[16];
     esp_ip4addr_ntoa(&event->ip_info.ip, buf, sizeof(buf));
-
     jac::Logger::debug("SYSTEM_EVENT_STA_GOT_IP: " + std::string(buf));
 }

@@ -24,6 +24,7 @@
 #include "espFeatures/extendLifetimeFeature.h"
 #include "espFeatures/pulseCounterFeature.h"
 #include "espFeatures/timestampFeature.h"
+#include "espFeatures/wifiFeature.h"
 
 #include "platform/espNvsKeyValue.h"
 #include "platform/espWifi.h"
@@ -77,6 +78,7 @@ using Machine = jac::ComposeMachine<
     SmartLedFeature,
     PulseCounterFeature,
     SimpleRadioFeature,
+    WifiFeature,
     jac::EventLoopTerminal
 >;
 
@@ -206,9 +208,9 @@ int main() {
     cfg.inherit_cfg = true;
     esp_pthread_set_cfg(&cfg);
 
-    auto *wifi = new EspWifiController();
-    wifi->initialize();
-    device.onKeyValueModified(std::bind(&EspWifiController::onKeyValueModified, wifi, std::placeholders::_1, std::placeholders::_2));
+    auto& wifi = EspWifiController::get();
+    wifi.initialize();
+    device.onKeyValueModified(std::bind(&EspWifiController::onKeyValueModified, &wifi, std::placeholders::_1, std::placeholders::_2));
 
     device.start();
 
