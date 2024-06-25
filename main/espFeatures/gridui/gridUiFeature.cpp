@@ -3,6 +3,9 @@
 #include <esp_netif.h>
 
 #include <gridui.h>
+#include <rbdns.h>
+
+#include "../../platform/espWifi.h"
 
 #include "./builder/arm.h"
 #include "./builder/bar.h"
@@ -148,6 +151,12 @@ void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::st
     );
     _protocol->start();
 
+    if(EspWifiController::get().mode() == EspWifiController::AP) {
+        rb::DnsServer::get().start("esp32.local", [](){
+            return EspWifiController::get().currentIp().addr;
+        });
+    }
+
     UI.begin(_protocol.get());
     builderCallback.call<void>(jac::Class<GridUiBuilderProtoBuilder>::createInstance(context, this));
     GridUiContext::get().clearProtos();
@@ -168,4 +177,6 @@ void GridUiHolder::end(jac::ContextRef context) {
     if(_protocol) {
         _protocol->stop();
     }
+
+    rb::DnsServer::get().stop();
 }

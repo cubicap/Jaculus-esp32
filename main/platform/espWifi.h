@@ -12,7 +12,7 @@
 #include "espNvsKeyValue.h"
 
 class EspWifiController {
-private:
+public:
     enum Mode : uint8_t {
         DISABLED,
         STATION,
@@ -21,6 +21,17 @@ private:
         MAX,
     };
 
+    static constexpr const char *KvNsWifiSsid = "wifi_net";
+    static constexpr const char *KvNsWifiMain = "wifi_cfg";
+    static constexpr const char *KeyWifiMode = "mode";
+    static constexpr const char *KeyWifiStaMode = "sta_mode";
+    static constexpr const char *KeyWifiStaSpecific = "sta_ssid";
+    static constexpr const char *KeyWifiStaApFallback = "sta_ap_fallback";
+    static constexpr const char *KeyWifiApSsid = "ap_ssid";
+    static constexpr const char *KeyWifiApPass = "ap_pass";
+    static constexpr const char *KeyWifiCurrentIp = "current_ip"; // "fake" key that is actually only ever in memory
+
+private:
     enum StaMode : uint8_t  {
         // Connect to any known network, pick the one with better signal if multiple found
         BEST_SIGNAL,
@@ -61,16 +72,6 @@ private:
         int32_t event_id, void* event_data);
 
 public:
-    static constexpr const char *KvNsWifiSsid = "wifi_net";
-    static constexpr const char *KvNsWifiMain = "wifi_cfg";
-    static constexpr const char *KeyWifiMode = "mode";
-    static constexpr const char *KeyWifiStaMode = "sta_mode";
-    static constexpr const char *KeyWifiStaSpecific = "sta_ssid";
-    static constexpr const char *KeyWifiStaApFallback = "sta_ap_fallback";
-    static constexpr const char *KeyWifiApSsid = "ap_ssid";
-    static constexpr const char *KeyWifiApPass = "ap_pass";
-    static constexpr const char *KeyWifiCurrentIp = "current_ip"; // "fake" key that is actually only ever in memory
-
     static EspWifiController& get() {
         static EspWifiController instance;
         return instance;
@@ -86,4 +87,6 @@ public:
         esp_ip4addr_ntoa(&_currentIp, buf, sizeof(buf));
         return buf;
     }
+
+    Mode mode() const { return _mode; }
 };
