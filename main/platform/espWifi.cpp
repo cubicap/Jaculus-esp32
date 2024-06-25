@@ -1,3 +1,5 @@
+#include <thread>
+
 #include "esp_wifi.h"
 #include "esp_netif.h"
 #include "espWifi.h"
@@ -5,6 +7,7 @@
 EspWifiController::EspWifiController() :
         _mode(Mode::DISABLED),
         _staMode(StaMode::BEST_SIGNAL),
+        _apFallback(true),
         _currentIp({}),
         _eventLoopOurs(false),
         _handler_wifi(nullptr),
@@ -30,6 +33,8 @@ bool EspWifiController::initialize() {
     }
 
     _staMode = (StaMode)kvMain->getInt(KeyWifiStaMode, StaMode::BEST_SIGNAL);
+
+    _apFallback = kvMain->getInt(KeyWifiStaApFallback, 1) != 0;
 
     return switchMode((Mode)kvMain->getInt(KeyWifiMode, Mode::DISABLED), std::move(kvMain));
 }
@@ -339,7 +344,8 @@ void EspWifiController::eventHandlerWifi(void* selfVoid, esp_event_base_t event_
 
             wifi_ap_record_t rec;
             const std::string not_exists_sentinel = "a";
-            while(true) {
+            bool connected = false;
+            while(!connected) {
                 auto err = esp_wifi_scan_get_ap_record(&rec);
                 if(err != ESP_OK) {
                     break;
@@ -364,10 +370,17 @@ void EspWifiController::eventHandlerWifi(void* selfVoid, esp_event_base_t event_
                     jac::Logger::error("esp_wifi_connect: " + std::string(esp_err_to_name(err)));
                     continue;
                 }
-                break;
+
+                connected = true;
             }
 
             esp_wifi_clear_ap_list();
+
+            if(!connected && self->_apFallback) {
+                std::thread([self](){
+                    self->switchMode(Mode::AP);
+                }).detach();
+            }
             break;
         }
     }

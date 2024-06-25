@@ -33,6 +33,7 @@ private:
 
     Mode _mode;
     StaMode _staMode;
+    bool _apFallback;
     esp_ip4_addr_t _currentIp;
 
     bool _eventLoopOurs;
@@ -65,6 +66,7 @@ public:
     static constexpr const char *KeyWifiMode = "mode";
     static constexpr const char *KeyWifiStaMode = "sta_mode";
     static constexpr const char *KeyWifiStaSpecific = "sta_ssid";
+    static constexpr const char *KeyWifiStaApFallback = "sta_ap_fallback";
     static constexpr const char *KeyWifiApSsid = "ap_ssid";
     static constexpr const char *KeyWifiApPass = "ap_pass";
     static constexpr const char *KeyWifiCurrentIp = "current_ip"; // "fake" key that is actually only ever in memory
