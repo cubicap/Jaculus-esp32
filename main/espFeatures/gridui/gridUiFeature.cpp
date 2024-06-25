@@ -1,5 +1,6 @@
 #include <memory>
 #include <esp_log.h>
+#include <esp_netif.h>
 
 #include <gridui.h>
 
@@ -125,6 +126,10 @@ void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::st
     }
 
     jac::Class<GridUiBuilderProtoBuilder>::init("guiBuilder");
+
+    // Initialize the TCP/IP stack - without this, the socket() call inside rb::Protocol
+    // will abort if the WiFi is disabled.
+    esp_netif_init();
 
     // Start serving the web page
     _webServerTask = rb_web_start_no_spiffs(80, "/data");
