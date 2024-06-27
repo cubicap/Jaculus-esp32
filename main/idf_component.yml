@@ -12,4 +12,4 @@ dependencies:
     version: v3.1.2
   Esp32-RBGridUI:
     git: https://github.com/RoboticsBrno/Esp32-RBGridUI.git
-    version: v5.2.4
+    version: v5.2.5
