@@ -38,12 +38,18 @@ class SelectBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
         proto.set("background", jac::Value(ctx, JS_NewCFunction(ctx, background, "background", 1)));
         proto.set("disabled", jac::Value(ctx, JS_NewCFunction(ctx, disabled, "disabled", 1)));
         proto.set("options", jac::Value(ctx, JS_NewCFunction(ctx, options, "options", 1)));
         proto.set("selectedIndex", jac::Value(ctx, JS_NewCFunction(ctx, selectedIndex, "selectedIndex", 1)));
+
+        defineBuilderCallback<builder::Select, Select, &builder::Select::onChanged>(ctx, proto, "onChanged");
+
         return proto;
     }
 };

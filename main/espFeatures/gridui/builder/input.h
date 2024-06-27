@@ -32,11 +32,17 @@ class InputBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
         proto.set("type", jac::Value(ctx, JS_NewCFunction(ctx, type, "type", 1)));
         proto.set("disabled", jac::Value(ctx, JS_NewCFunction(ctx, disabled, "disabled", 1)));
+
+        defineBuilderCallback<builder::Input, Input, &builder::Input::onChanged>(ctx, proto, "onChanged");
+
         return proto;
     }
 };

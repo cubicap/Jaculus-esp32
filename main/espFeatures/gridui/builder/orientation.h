@@ -14,8 +14,14 @@ class OrientationBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
+
+        defineBuilderCallback<builder::Orientation, Orientation, &builder::Orientation::onPositionChanged>(ctx, proto, "onPositionChanged");
+
         return proto;
     }
 };

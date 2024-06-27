@@ -26,12 +26,14 @@ class JoystickBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
         proto.set("keys", jac::Value(ctx, JS_NewCFunction(ctx, keys, "keys", 1)));
         proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
 
-        using namespace gridui;
         defineBuilderCallback<builder::Joystick, Joystick, &builder::Joystick::onClick>(ctx, proto, "onClick");
         defineBuilderCallback<builder::Joystick, Joystick, &builder::Joystick::onPositionChanged>(ctx, proto, "onPositionChanged");
 

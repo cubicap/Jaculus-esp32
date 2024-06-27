@@ -56,7 +56,10 @@ class CircleBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
         proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 1)));
         proto.set("min", jac::Value(ctx, JS_NewCFunction(ctx, min, "min", 1)));
@@ -65,6 +68,7 @@ public:
         proto.set("valueStart", jac::Value(ctx, JS_NewCFunction(ctx, valueStart, "valueStart", 1)));
         proto.set("value", jac::Value(ctx, JS_NewCFunction(ctx, value, "value", 1)));
         proto.set("showValue", jac::Value(ctx, JS_NewCFunction(ctx, showValue, "showValue", 1)));
+
         return proto;
     }
 };

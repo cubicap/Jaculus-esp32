@@ -20,9 +20,13 @@ class LedBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
         proto.set("on", jac::Value(ctx, JS_NewCFunction(ctx, on, "on", 1)));
+
         return proto;
     }
 };

@@ -32,11 +32,17 @@ class SwitcherBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 1)));
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
         proto.set("min", jac::Value(ctx, JS_NewCFunction(ctx, min, "min", 1)));
         proto.set("max", jac::Value(ctx, JS_NewCFunction(ctx, max, "max", 1)));
+
+        defineBuilderCallback<builder::Switcher, Switcher, &builder::Switcher::onChanged>(ctx, proto, "onChanged");
+
         return proto;
     }
 };

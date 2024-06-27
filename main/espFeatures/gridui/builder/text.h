@@ -56,7 +56,10 @@ class TextBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
         proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 1)));
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
@@ -65,6 +68,7 @@ public:
         proto.set("valign", jac::Value(ctx, JS_NewCFunction(ctx, valign, "valign", 1)));
         proto.set("prefix", jac::Value(ctx, JS_NewCFunction(ctx, prefix, "prefix", 1)));
         proto.set("suffix", jac::Value(ctx, JS_NewCFunction(ctx, suffix, "suffix", 1)));
+
         return proto;
     }
 };

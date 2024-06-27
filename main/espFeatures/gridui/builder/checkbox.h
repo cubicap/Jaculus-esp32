@@ -32,11 +32,17 @@ class CheckboxBuilder {
 
 public:
     static jac::Object proto(jac::ContextRef ctx) {
+        using namespace gridui;
+
         auto proto = jac::Object::create(ctx);
+
         proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 1)));
         proto.set("checked", jac::Value(ctx, JS_NewCFunction(ctx, checked, "checked", 1)));
         proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
         proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
+
+        defineBuilderCallback<builder::Checkbox, Checkbox, &builder::Checkbox::onChanged>(ctx, proto, "onChanged");
+
         return proto;
     }
 };
