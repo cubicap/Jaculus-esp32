@@ -28,7 +28,8 @@ class LedcFeature : public Next {
                 .duty_resolution = static_cast<ledc_timer_bit_t>(resolution),
                 .timer_num = static_cast<ledc_timer_t>(timerNum),
                 .freq_hz = static_cast<uint32_t>(frequency),
-                .clk_cfg = LEDC_AUTO_CLK
+                .clk_cfg = LEDC_AUTO_CLK,
+                .deconfigure = false
             };
             esp_err_t err = ledc_timer_config(&ledc_timer);
             if (err != ESP_OK) {
