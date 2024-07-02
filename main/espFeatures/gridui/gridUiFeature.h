@@ -20,7 +20,7 @@ public:
     GridUiHolder() : _webServerTask(nullptr) { }
 
     void begin(jac::ContextRef context, std::string ownerName, std::string deviceName, jac::Function builderCallback);
-    void end();
+    void end(jac::ContextRef context);
 };
 
 template<class Next>
@@ -48,7 +48,9 @@ public:
         griduiModule.addExport("begin", ff.newFunction(noal::function([this](std::string ownerName, std::string deviceName, jac::Function builderCallback){
             _holder.begin(this->context(), ownerName, deviceName, builderCallback);
         })));
-        griduiModule.addExport("end", ff.newFunction(noal::function(&GridUiHolder::end, &_holder)));
+        griduiModule.addExport("end", ff.newFunction(noal::function([this]() {
+            _holder.end(this->context());
+        })));
 
         griduiModule.addExport("version", ff.newFunction(noal::function([](){
             return RB_GRIDUI_VERSION;
@@ -56,7 +58,7 @@ public:
     }
 
     ~GridUiFeature() {
-        _holder.end();
+        _holder.end(this->context());
         gridui_jac::GridUiContext::get().setScheduleEvent(nullptr);
     }
 };

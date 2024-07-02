@@ -31,7 +31,12 @@ class GridUiContext {
     static constexpr const uint16_t _builderOffset = 1000;
 
     std::map<uint16_t, jac::Object> _protoCache;
-    std::map<uint16_t, jac::Object> _constructedWidgets;
+
+    struct __attribute__ ((packed)) HandlerWidgetItem {
+        JSValue object;
+        uint16_t uuid;
+    };
+    std::vector<HandlerWidgetItem> _handlerWidgets;
 
     std::function<void(std::function<void()>)> _scheduleEvent;
 
@@ -51,13 +56,19 @@ public:
         }
     }
 
-    void clear() {
+    void clear(jac::ContextRef ctx) {
         clearProtos();
-        _constructedWidgets.clear();
+
+        for(auto& handle : _handlerWidgets) {
+            JS_FreeValue(ctx.get(), handle.object);
+        }
+        _handlerWidgets.clear();
+        _handlerWidgets.shrink_to_fit();
     }
 
     void clearProtos() {
         _protoCache.clear();
+        _handlerWidgets.shrink_to_fit();
     }
 
     jac::Object getProto(jac::ContextRef ctx, WidgetTypeId typeId, bool isBuilder, std::function<jac::Object(jac::ContextRef)> createNewProto) {
@@ -87,18 +98,33 @@ public:
 
         if(!isBuilder) {
             auto widget = reinterpret_cast<gridui::Widget*>(opaque);
-            _constructedWidgets.insert({widget->uuid(), obj});
+            if(widget->hasRegisteredCallbacks()) {
+                addHandlerWidget(widget->uuid(), obj);
+            }
         }
 
         return obj;
     }
 
-    jac::Value getConstructedWidget(jac::ContextRef ctx, uint16_t uuid) {
-        auto itr = _constructedWidgets.find(uuid);
-        if(itr == _constructedWidgets.end()) {
-            return jac::Value::undefined(ctx);
+    void addHandlerWidget(uint16_t uuid, jac::Object obj) {
+        for(const auto& handle : _handlerWidgets) {
+            if(handle.uuid == uuid) {
+                return;
+            }
         }
-        return itr->second;
+        _handlerWidgets.push_back({
+            .object = obj.loot().second,
+            .uuid = uuid,
+        });
+    }
+
+    jac::Value getHandlerWidget(jac::ContextRef ctx, uint16_t uuid) {
+        for(const auto& handle : _handlerWidgets) {
+            if(handle.uuid == uuid) {
+                return jac::Object(ctx, JS_DupValue(ctx.get(), handle.object));
+            }
+        }
+        return jac::Value::undefined(ctx);
     }
 };
 
@@ -133,7 +159,7 @@ static JSValue builderCallbackImpl(JSContext* ctx_, JSValueConst thisVal, int ar
     (builder->*setter)([ctx_, callback](WidgetT& widget) {
         const auto uuid = widget.uuid();
         GridUiContext::get().scheduleEvent([ctx_, callback, uuid]() mutable {
-            auto obj = GridUiContext::get().getConstructedWidget(ctx_, uuid);
+            auto obj = GridUiContext::get().getHandlerWidget(ctx_, uuid);
             callback.call<void>(obj);
         });
     });

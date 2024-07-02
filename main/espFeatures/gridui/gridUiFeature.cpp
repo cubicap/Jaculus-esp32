@@ -154,13 +154,13 @@ void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::st
     UI.commit();
 }
 
-void GridUiHolder::end() {
+void GridUiHolder::end(jac::ContextRef context) {
     if(!_webServerTask) {
         return;
     }
 
     gridui::UI.end();
-    GridUiContext::get().clear();
+    GridUiContext::get().clear(context);
 
     rb_web_stop(_webServerTask);
     _webServerTask = nullptr;
