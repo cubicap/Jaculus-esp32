@@ -3,7 +3,15 @@
 #include <jac/link/stream.h>
 #include <jac/device/logger.h>
 
+#include <algorithm>
+#include <array>
 #include <atomic>
+#include <cstdint>
+#include <deque>
+#include <functional>
+#include <span>
+#include <thread>
+
 #include "driver/usb_serial_jtag.h"
 
 

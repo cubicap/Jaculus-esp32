@@ -4,6 +4,11 @@
 #include <jac/device/logger.h>
 
 #include <atomic>
+#include <cstdint>
+#include <functional>
+#include <span>
+#include <thread>
+
 #include "driver/uart.h"
 
 

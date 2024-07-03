@@ -31,6 +31,7 @@
 #include "platform/espWifi.h"
 
 #include "util/uartStream.h"
+#include "util/tcpStream.h"
 
 #include "resources/resources.h"
 
@@ -118,6 +119,7 @@ jac::Device<Machine> device(
 
 using Mux_t = jac::Mux<jac::CobsEncoder>;
 std::unique_ptr<Mux_t> muxUart;
+std::unique_ptr<Mux_t> muxTcp;
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3)
     std::unique_ptr<Mux_t> muxJtag;
@@ -172,6 +174,11 @@ int main() {
     }
     ESP_ERROR_CHECK(err);
 
+    // initialize wifi
+    auto& wifi = EspWifiController::get();
+    wifi.initialize();
+    device.onKeyValueModified(std::bind(&EspWifiController::onKeyValueModified, &wifi, std::placeholders::_1, std::placeholders::_2));
+
     // initialize uart connection
     auto uartStream = std::make_unique<UartStream>(UART_NUM_0, 921600, 4096, 0);
     uartStream->start();
@@ -192,6 +199,16 @@ int main() {
     muxJtag->bindRx(std::make_unique<decltype(handleUsb)>(std::move(handleUsb)));
 #endif
 
+    // initialize tcp stream
+    auto tcpStream = std::make_unique<TcpStream>();
+    tcpStream->start();
+
+    muxTcp = std::make_unique<Mux_t>(std::move(tcpStream));
+    muxTcp->setErrorHandler(reportMuxError);
+    auto handleTcp = device.router().subscribeTx(3, *muxTcp);
+    muxTcp->bindRx(std::make_unique<decltype(handleTcp)>(std::move(handleTcp)));
+
+
     device.onConfigureMachine([&](Machine &machine) {
         device.machineIO().in->clear();
 
@@ -209,10 +226,6 @@ int main() {
     cfg.stack_size = 10 * 1024;
     cfg.inherit_cfg = true;
     esp_pthread_set_cfg(&cfg);
-
-    auto& wifi = EspWifiController::get();
-    wifi.initialize();
-    device.onKeyValueModified(std::bind(&EspWifiController::onKeyValueModified, &wifi, std::placeholders::_1, std::placeholders::_2));
 
     device.start();
 
