@@ -199,14 +199,16 @@ int main() {
     muxJtag->bindRx(std::make_unique<decltype(handleUsb)>(std::move(handleUsb)));
 #endif
 
-    // initialize tcp stream
-    auto tcpStream = std::make_unique<TcpStream>();
-    tcpStream->start();
+    if (wifi.mode() != EspWifiController::DISABLED) {
+        // initialize tcp stream
+        auto tcpStream = std::make_unique<TcpStream>();
+        tcpStream->start();
 
-    muxTcp = std::make_unique<Mux_t>(std::move(tcpStream));
-    muxTcp->setErrorHandler(reportMuxError);
-    auto handleTcp = device.router().subscribeTx(3, *muxTcp);
-    muxTcp->bindRx(std::make_unique<decltype(handleTcp)>(std::move(handleTcp)));
+        muxTcp = std::make_unique<Mux_t>(std::move(tcpStream));
+        muxTcp->setErrorHandler(reportMuxError);
+        auto handleTcp = device.router().subscribeTx(3, *muxTcp);
+        muxTcp->bindRx(std::make_unique<decltype(handleTcp)>(std::move(handleTcp)));
+    }
 
 
     device.onConfigureMachine([&](Machine &machine) {

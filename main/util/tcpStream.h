@@ -13,8 +13,6 @@
 #include <string>
 #include <thread>
 
-#include <string.h>
-
 #include <sys/param.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
