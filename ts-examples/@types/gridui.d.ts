@@ -276,6 +276,8 @@ declare module "gridui" {
             prefix(prefix: string): Text
             suffix(suffix: string): Text
         }
+
+        interface Widget extends Base {}
     }
 
     class Builder {
