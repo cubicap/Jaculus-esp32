@@ -7,27 +7,28 @@ namespace gridui_jac {
 
 class LedBuilder {
     static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Led*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Led>(thisVal);
         builder.color(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue on(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Led*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Led>(thisVal);
         builder.on(jac::ValueWeak(ctx_, argv[0]).to<bool>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const char *name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(strcmp(name, "css") == 0) return builderCss<builder::Led>;
+        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Led, builder::Led, Led>;
 
-        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
-        proto.set("on", jac::Value(ctx, JS_NewCFunction(ctx, on, "on", 1)));
+        if(strcmp(name, "color") == 0) return color;
+        if(strcmp(name, "on") == 0) return on;
 
-        return proto;
+        return nullptr;
     }
 };
 

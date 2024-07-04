@@ -7,43 +7,44 @@ namespace gridui_jac {
 
 class InputBuilder {
     static JSValue text(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Input*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Input>(thisVal);
         builder.text(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Input*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Input>(thisVal);
         builder.color(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue type(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Input*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Input>(thisVal);
         builder.type(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue disabled(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Input*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Input>(thisVal);
         builder.disabled(jac::ValueWeak(ctx_, argv[0]).to<bool>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const char *name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(strcmp(name, "css") == 0) return builderCss<builder::Input>;
+        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Input, builder::Input, Input>;
 
-        proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
-        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
-        proto.set("type", jac::Value(ctx, JS_NewCFunction(ctx, type, "type", 1)));
-        proto.set("disabled", jac::Value(ctx, JS_NewCFunction(ctx, disabled, "disabled", 1)));
+        if(strcmp(name, "text") == 0) return text;
+        if(strcmp(name, "color") == 0) return color;
+        if(strcmp(name, "type") == 0) return type;
+        if(strcmp(name, "disabled") == 0) return disabled;
 
-        defineBuilderCallback<builder::Input, Input, &builder::Input::onChanged>(ctx, proto, "onChanged");
+        if(strcmp(name, "onChanged") == 0) return &builderCallbackImpl<builder::Input, Input, &builder::Input::onChanged>;
 
-        return proto;
+        return nullptr;
     }
 };
 

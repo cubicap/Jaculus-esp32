@@ -7,43 +7,44 @@ namespace gridui_jac {
 
 class CheckboxBuilder {
     static JSValue fontSize(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Checkbox>(thisVal);
         builder.fontSize(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue checked(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Checkbox>(thisVal);
         builder.checked(jac::ValueWeak(ctx_, argv[0]).to<bool>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Checkbox>(thisVal);
         builder.color(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue text(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Checkbox*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Checkbox>(thisVal);
         builder.text(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const char *name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(strcmp(name, "css") == 0) return builderCss<builder::Checkbox>;
+        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Checkbox, builder::Checkbox, Checkbox>;
 
-        proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 1)));
-        proto.set("checked", jac::Value(ctx, JS_NewCFunction(ctx, checked, "checked", 1)));
-        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
-        proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
+        if(strcmp(name, "fontSize") == 0) return fontSize;
+        if(strcmp(name, "checked") == 0) return checked;
+        if(strcmp(name, "color") == 0) return color;
+        if(strcmp(name, "text") == 0) return text;
 
-        defineBuilderCallback<builder::Checkbox, Checkbox, &builder::Checkbox::onChanged>(ctx, proto, "onChanged");
+        if(strcmp(name, "onChanged") == 0) return &builderCallbackImpl<builder::Checkbox, Checkbox, &builder::Checkbox::onChanged>;
 
-        return proto;
+        return nullptr;
     }
 };
 

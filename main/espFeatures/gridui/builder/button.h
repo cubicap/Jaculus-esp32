@@ -7,65 +7,66 @@ namespace gridui_jac {
 
 class ButtonBuilder {
     static JSValue text(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Button>(thisVal);
         builder.text(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue fontSize(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Button>(thisVal);
         builder.fontSize(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Button>(thisVal);
         builder.color(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue background(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Button>(thisVal);
         builder.background(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue align(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Button>(thisVal);
         builder.align(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue valign(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Button>(thisVal);
         builder.valign(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue disabled(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Button*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Button>(thisVal);
         builder.disabled(jac::ValueWeak(ctx_, argv[0]).to<bool>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const char *name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(strcmp(name, "css") == 0) return builderCss<builder::Button>;
+        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Button, builder::Button, Button>;
 
-        proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
-        proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 1)));
-        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
-        proto.set("background", jac::Value(ctx, JS_NewCFunction(ctx, background, "background", 1)));
-        proto.set("align", jac::Value(ctx, JS_NewCFunction(ctx, align, "align", 1)));
-        proto.set("valign", jac::Value(ctx, JS_NewCFunction(ctx, valign, "valign", 1)));
-        proto.set("disabled", jac::Value(ctx, JS_NewCFunction(ctx, disabled, "disabled", 1)));
+        if(strcmp(name, "text") == 0) return text;
+        if(strcmp(name, "fontSize") == 0) return fontSize;
+        if(strcmp(name, "color") == 0) return color;
+        if(strcmp(name, "background") == 0) return background;
+        if(strcmp(name, "align") == 0) return align;
+        if(strcmp(name, "valign") == 0) return valign;
+        if(strcmp(name, "disabled") == 0) return disabled;
 
-        defineBuilderCallback<builder::Button, Button, &builder::Button::onPress>(ctx, proto, "onPress");
-        defineBuilderCallback<builder::Button, Button, &builder::Button::onRelease>(ctx, proto, "onRelease");
+        if(strcmp(name, "onPress") == 0) return &builderCallbackImpl<builder::Button, Button, &builder::Button::onPress>;
+        if(strcmp(name, "onRelease") == 0) return &builderCallbackImpl<builder::Button, Button, &builder::Button::onRelease>;
 
-        return proto;
+        return nullptr;
     }
 };
 

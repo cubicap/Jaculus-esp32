@@ -7,55 +7,56 @@ namespace gridui_jac {
 
 class BarBuilder {
     static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Bar*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Bar>(thisVal);
         builder.color(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue fontSize(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Bar*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Bar>(thisVal);
         builder.fontSize(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue min(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Bar*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Bar>(thisVal);
         builder.min(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue max(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Bar*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Bar>(thisVal);
         builder.max(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue value(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Bar*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Bar>(thisVal);
         builder.value(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue showValue(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Bar*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Bar>(thisVal);
         builder.showValue(jac::ValueWeak(ctx_, argv[0]).to<bool>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const char *name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(strcmp(name, "css") == 0) return builderCss<builder::Bar>;
+        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Bar, builder::Bar, Bar>;
 
-        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
-        proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 1)));
-        proto.set("min", jac::Value(ctx, JS_NewCFunction(ctx, min, "min", 1)));
-        proto.set("max", jac::Value(ctx, JS_NewCFunction(ctx, max, "max", 1)));
-        proto.set("value", jac::Value(ctx, JS_NewCFunction(ctx, value, "value", 1)));
-        proto.set("showValue", jac::Value(ctx, JS_NewCFunction(ctx, showValue, "showValue", 1)));
+        if(strcmp(name, "color") == 0) return color;
+        if(strcmp(name, "fontSize") == 0) return fontSize;
+        if(strcmp(name, "min") == 0) return min;
+        if(strcmp(name, "max") == 0) return max;
+        if(strcmp(name, "value") == 0) return value;
+        if(strcmp(name, "showValue") == 0) return showValue;
 
-        return proto;
+        return nullptr;
     }
 };
 

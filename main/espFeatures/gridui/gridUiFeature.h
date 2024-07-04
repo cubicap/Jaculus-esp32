@@ -16,6 +16,8 @@ class GridUiHolder {
     TaskHandle_t _webServerTask;
     std::unique_ptr<rb::Protocol> _protocol;
 
+    void createClasses(jac::ContextRef context);
+
 public:
     GridUiHolder() : _webServerTask(nullptr) { }
 

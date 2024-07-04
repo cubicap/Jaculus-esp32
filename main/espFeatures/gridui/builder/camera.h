@@ -7,27 +7,28 @@ namespace gridui_jac {
 
 class CameraBuilder {
     static JSValue rotation(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Camera*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Camera>(thisVal);
         builder.rotation(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue clip(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Camera*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Camera>(thisVal);
         builder.clip(jac::ValueWeak(ctx_, argv[0]).to<bool>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const char *name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(strcmp(name, "css") == 0) return builderCss<builder::Camera>;
+        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Camera, builder::Camera, Camera>;
 
-        proto.set("rotation", jac::Value(ctx, JS_NewCFunction(ctx, rotation, "rotation", 1)));
-        proto.set("clip", jac::Value(ctx, JS_NewCFunction(ctx, clip, "clip", 1)));
+        if(strcmp(name, "rotation") == 0) return rotation;
+        if(strcmp(name, "clip") == 0) return clip;
 
-        return proto;
+        return nullptr;
     }
 };
 
