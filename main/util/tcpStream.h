@@ -164,7 +164,6 @@ public:
                 std::array<char, 128> rx_buffer;
                 _connClose = false;
                 do {
-                    jac::Logger::debug("trying to get data");
                     int len = recv(_clientSock, &(*rx_buffer.begin()), rx_buffer.size(), 0);
                     if (len < 0) {
                         jac::Logger::error(std::string("Error occurred during receiving: errno ") + std::to_string(errno));
