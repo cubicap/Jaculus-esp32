@@ -82,8 +82,10 @@ void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::st
 
     rb_web_set_not_found_callback(gridui::webserverNotFoundCallback);
 
+    _ownerName = ownerName;
+    _deviceName = deviceName;
     _protocol.reset(
-        new rb::Protocol("FrantaFlinta", "Jaculus-test", "Compiled at " __DATE__ " " __TIME__,
+        new rb::Protocol(_ownerName.c_str(), _deviceName.c_str(), "Jaculus",
             [](const std::string& cmd, rbjson::Object* pkt) {
                 UI.handleRbPacket(cmd, pkt);
             }
@@ -117,6 +119,10 @@ void GridUiHolder::end(jac::ContextRef context) {
 
     if(_protocol) {
         _protocol->stop();
+        _protocol.reset();
+
+        _ownerName = std::string();
+        _deviceName = std::string();
     }
 
     rb::DnsServer::get().stop();
