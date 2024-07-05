@@ -25,6 +25,12 @@ public:
 
     void begin(jac::ContextRef context, std::string ownerName, std::string deviceName, jac::Function builderCallback);
     void end(jac::ContextRef context);
+
+    void log(const std::string& msg) {
+        if(_protocol) {
+            _protocol->send_log(msg);
+        }
+    }
 };
 
 template<class Next>
@@ -55,7 +61,12 @@ public:
         griduiModule.addExport("end", ff.newFunction(noal::function([this]() {
             _holder.end(this->context());
         })));
-
+        griduiModule.addExport("changeTab", ff.newFunction(noal::function([](int tab){
+            UI.changeTab(tab);
+        })));
+        griduiModule.addExport("log", ff.newFunction(noal::function([this](std::string message){
+            _holder.log(message);
+        })));
         griduiModule.addExport("version", ff.newFunction(noal::function([](){
             return RB_GRIDUI_VERSION;
         })));

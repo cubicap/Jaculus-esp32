@@ -339,6 +339,16 @@ declare module "gridui" {
     function end(): void
 
     /**
+     * Set current tab index
+     */
+    function changeTab(index: number): void
+
+    /**
+     * Send a message to the integrated terminal at the top of the UI.
+     */
+    function log(message: string): void
+
+    /**
      * Returns included GridUI version as number, to be compared with hex representation of the version.
      * 
      * For example, for version 5.1.0, do: `gridui.version() >= 0x050100`
