@@ -23,6 +23,8 @@ public:
     float getFloat(const std::string& name, float def_value = 0.f);
     std::string getString(const std::string& name, std::string def_value = "");
 
+    DataType getType(const std::string& name);
+
     bool commit();
 };
 
