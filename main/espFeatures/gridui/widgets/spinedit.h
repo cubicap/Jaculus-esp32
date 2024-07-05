@@ -58,28 +58,28 @@ class SpinEditWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "fontSize") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "fontSize") {
             *getter = fontSize;
             *setter = setFontSize;
             return;
         }
-        if(strcmp(name, "color") == 0) {
+        if(name == "color") {
             *getter = color;
             *setter = setColor;
             return;
         }
-        if(strcmp(name, "value") == 0) {
+        if(name == "value") {
             *getter = value;
             *setter = setValue;
             return;
         }
-        if(strcmp(name, "step") == 0) {
+        if(name == "step") {
             *getter = step;
             *setter = setStep;
             return;
         }
-        if(strcmp(name, "precision") == 0) {
+        if(name == "precision") {
             *getter = precision;
             *setter = setPrecision;
             return;

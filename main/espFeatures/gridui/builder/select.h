@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class SelectBuilder {
@@ -37,19 +39,19 @@ class SelectBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Select>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Select, builder::Select, Select>;
+        if(name == "css") return builderCss<builder::Select>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Select, builder::Select, Select>;
 
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "background") == 0) return background;
-        if(strcmp(name, "disabled") == 0) return disabled;
-        if(strcmp(name, "options") == 0) return options;
-        if(strcmp(name, "selectedIndex") == 0) return selectedIndex;
+        if(name == "color") return color;
+        if(name == "background") return background;
+        if(name == "disabled") return disabled;
+        if(name == "options") return options;
+        if(name == "selectedIndex") return selectedIndex;
 
-        if(strcmp(name, "onChanged") == 0) return &builderCallbackImpl<builder::Select, Select, &builder::Select::onChanged>;
+        if(name == "onChanged") return &builderCallbackImpl<builder::Select, Select, &builder::Select::onChanged>;
 
         return nullptr;
     }

@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class CircleBuilder {
@@ -55,20 +57,20 @@ class CircleBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Circle>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Circle, builder::Circle, Circle>;
+        if(name == "css") return builderCss<builder::Circle>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Circle, builder::Circle, Circle>;
 
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "fontSize") == 0) return fontSize;
-        if(strcmp(name, "min") == 0) return min;
-        if(strcmp(name, "max") == 0) return max;
-        if(strcmp(name, "lineWidth") == 0) return lineWidth;
-        if(strcmp(name, "valueStart") == 0) return valueStart;
-        if(strcmp(name, "value") == 0) return value;
-        if(strcmp(name, "showValue") == 0) return showValue;
+        if(name == "color") return color;
+        if(name == "fontSize") return fontSize;
+        if(name == "min") return min;
+        if(name == "max") return max;
+        if(name == "lineWidth") return lineWidth;
+        if(name == "valueStart") return valueStart;
+        if(name == "value") return value;
+        if(name == "showValue") return showValue;
 
         return nullptr;
     }

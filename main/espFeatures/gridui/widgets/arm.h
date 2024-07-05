@@ -18,12 +18,12 @@ class ArmWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "x") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "x") {
             *getter = x;
             return;
         }
-        if(strcmp(name, "y") == 0) {
+        if(name == "y") {
             *getter = y;
             return;
         }

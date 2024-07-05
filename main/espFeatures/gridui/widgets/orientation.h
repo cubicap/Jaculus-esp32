@@ -43,29 +43,29 @@ class OrientationWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "color") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "color") {
             *getter = color;
             *setter = setColor;
             return;
         }
-        if(strcmp(name, "yaw") == 0) {
+        if(name == "yaw") {
             *getter = yaw;
             return;
         }
-        if(strcmp(name, "pitch") == 0) {
+        if(name == "pitch") {
             *getter = pitch;
             return;
         }
-        if(strcmp(name, "roll") == 0) {
+        if(name == "roll") {
             *getter = roll;
             return;
         }
-        if(strcmp(name, "joystickX") == 0) {
+        if(name == "joystickX") {
             *getter = joystickX;
             return;
         }
-        if(strcmp(name, "joystickY") == 0) {
+        if(name == "joystickY") {
             *getter = joystickY;
             return;
         }

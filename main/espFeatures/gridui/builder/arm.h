@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class ArmBuilder {
@@ -14,16 +16,16 @@ class ArmBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Arm>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Arm, builder::Arm, Arm>;
+        if(name == "css") return builderCss<builder::Arm>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Arm, builder::Arm, Arm>;
 
-        if(strcmp(name, "info") == 0) return info;
+        if(name == "info") return info;
 
-        if(strcmp(name, "onGrab") == 0) return &builderCallbackImpl<builder::Arm, Arm, &builder::Arm::onGrab>;
-        if(strcmp(name, "onPositionChanged") == 0) return &builderCallbackImpl<builder::Arm, Arm, &builder::Arm::onPositionChanged>;
+        if(name == "onGrab") return &builderCallbackImpl<builder::Arm, Arm, &builder::Arm::onGrab>;
+        if(name == "onPositionChanged") return &builderCallbackImpl<builder::Arm, Arm, &builder::Arm::onPositionChanged>;
 
         return nullptr;
     }

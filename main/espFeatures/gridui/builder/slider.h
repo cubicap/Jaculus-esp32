@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class SliderBuilder {
@@ -49,21 +51,21 @@ class SliderBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Slider>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Slider, builder::Slider, Slider>;
+        if(name == "css") return builderCss<builder::Slider>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Slider, builder::Slider, Slider>;
 
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "fontSize") == 0) return fontSize;
-        if(strcmp(name, "min") == 0) return min;
-        if(strcmp(name, "max") == 0) return max;
-        if(strcmp(name, "value") == 0) return value;
-        if(strcmp(name, "precision") == 0) return precision;
-        if(strcmp(name, "showValue") == 0) return showValue;
+        if(name == "color") return color;
+        if(name == "fontSize") return fontSize;
+        if(name == "min") return min;
+        if(name == "max") return max;
+        if(name == "value") return value;
+        if(name == "precision") return precision;
+        if(name == "showValue") return showValue;
 
-        if(strcmp(name, "onChanged") == 0) return &builderCallbackImpl<builder::Slider, Slider, &builder::Slider::onChanged>;
+        if(name == "onChanged") return &builderCallbackImpl<builder::Slider, Slider, &builder::Slider::onChanged>;
 
         return nullptr;
     }

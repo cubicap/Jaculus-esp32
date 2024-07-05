@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class JoystickBuilder {
@@ -25,18 +27,18 @@ class JoystickBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Joystick>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Joystick, builder::Joystick, Joystick>;
+        if(name == "css") return builderCss<builder::Joystick>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Joystick, builder::Joystick, Joystick>;
 
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "keys") == 0) return keys;
-        if(strcmp(name, "text") == 0) return text;
+        if(name == "color") return color;
+        if(name == "keys") return keys;
+        if(name == "text") return text;
 
-        if(strcmp(name, "onClick") == 0) return &builderCallbackImpl<builder::Joystick, Joystick, &builder::Joystick::onClick>;
-        if(strcmp(name, "onPositionChanged") == 0) return &builderCallbackImpl<builder::Joystick, Joystick, &builder::Joystick::onPositionChanged>;
+        if(name == "onClick") return &builderCallbackImpl<builder::Joystick, Joystick, &builder::Joystick::onClick>;
+        if(name == "onPositionChanged") return &builderCallbackImpl<builder::Joystick, Joystick, &builder::Joystick::onPositionChanged>;
 
         return nullptr;
     }

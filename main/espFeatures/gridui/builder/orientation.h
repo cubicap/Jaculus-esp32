@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class OrientationBuilder {
@@ -13,15 +15,15 @@ class OrientationBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Orientation>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Orientation, builder::Orientation, Orientation>;
+        if(name == "css") return builderCss<builder::Orientation>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Orientation, builder::Orientation, Orientation>;
 
-        if(strcmp(name, "color") == 0) return color;
+        if(name == "color") return color;
 
-        if(strcmp(name, "onPositionChanged") == 0) return &builderCallbackImpl<builder::Orientation, Orientation, &builder::Orientation::onPositionChanged>;
+        if(name == "onPositionChanged") return &builderCallbackImpl<builder::Orientation, Orientation, &builder::Orientation::onPositionChanged>;
 
         return nullptr;
     }

@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class CheckboxBuilder {
@@ -31,18 +33,18 @@ class CheckboxBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Checkbox>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Checkbox, builder::Checkbox, Checkbox>;
+        if(name == "css") return builderCss<builder::Checkbox>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Checkbox, builder::Checkbox, Checkbox>;
 
-        if(strcmp(name, "fontSize") == 0) return fontSize;
-        if(strcmp(name, "checked") == 0) return checked;
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "text") == 0) return text;
+        if(name == "fontSize") return fontSize;
+        if(name == "checked") return checked;
+        if(name == "color") return color;
+        if(name == "text") return text;
 
-        if(strcmp(name, "onChanged") == 0) return &builderCallbackImpl<builder::Checkbox, Checkbox, &builder::Checkbox::onChanged>;
+        if(name == "onChanged") return &builderCallbackImpl<builder::Checkbox, Checkbox, &builder::Checkbox::onChanged>;
 
         return nullptr;
     }

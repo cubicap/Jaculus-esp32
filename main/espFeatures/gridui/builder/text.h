@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class TextBuilder {
@@ -55,20 +57,20 @@ class TextBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Text>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Text, builder::Text, Text>;
+        if(name == "css") return builderCss<builder::Text>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Text, builder::Text, Text>;
 
-        if(strcmp(name, "text") == 0) return text;
-        if(strcmp(name, "fontSize") == 0) return fontSize;
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "background") == 0) return background;
-        if(strcmp(name, "align") == 0) return align;
-        if(strcmp(name, "valign") == 0) return valign;
-        if(strcmp(name, "prefix") == 0) return prefix;
-        if(strcmp(name, "suffix") == 0) return suffix;
+        if(name == "text") return text;
+        if(name == "fontSize") return fontSize;
+        if(name == "color") return color;
+        if(name == "background") return background;
+        if(name == "align") return align;
+        if(name == "valign") return valign;
+        if(name == "prefix") return prefix;
+        if(name == "suffix") return suffix;
 
         return nullptr;
     }

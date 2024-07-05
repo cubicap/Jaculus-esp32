@@ -68,6 +68,7 @@ public:
         auto val = widget.css(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return jac::Value::from(ctx_, val).loot().second;
     }
+
     static JSValue setCss(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
         auto& widget = widgetOpaque<gridui::Widget>(thisVal);
         auto key = jac::ValueWeak(ctx_, argv[0]).to<std::string>();
@@ -76,32 +77,33 @@ public:
         return JS_UNDEFINED;
     }
 
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "uuid") == 0) {
+
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "uuid") {
             *getter = uuid;
             return;
         }
-        if(strcmp(name, "widgetX") == 0) {
+        if(name == "widgetX") {
             *getter = widgetX;
             *setter = setWidgetX;
             return;
         }
-        if(strcmp(name, "widgetY") == 0) {
+        if(name == "widgetY") {
             *getter = widgetY;
             *setter = setWidgetY;
             return;
         }
-        if(strcmp(name, "widgetW") == 0) {
+        if(name == "widgetW") {
             *getter = widgetW;
             *setter = setWidgetW;
             return;
         }
-        if(strcmp(name, "widgetH") == 0) {
+        if(name == "widgetH") {
             *getter = widgetH;
             *setter = setWidgetH;
             return;
         }
-        if(strcmp(name, "widgetTab") == 0) {
+        if(name == "widgetTab") {
             *getter = widgetTab;
             *setter = setWidgetTab;
             return;

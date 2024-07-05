@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class InputBuilder {
@@ -31,18 +33,18 @@ class InputBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Input>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Input, builder::Input, Input>;
+        if(name == "css") return builderCss<builder::Input>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Input, builder::Input, Input>;
 
-        if(strcmp(name, "text") == 0) return text;
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "type") == 0) return type;
-        if(strcmp(name, "disabled") == 0) return disabled;
+        if(name == "text") return text;
+        if(name == "color") return color;
+        if(name == "type") return type;
+        if(name == "disabled") return disabled;
 
-        if(strcmp(name, "onChanged") == 0) return &builderCallbackImpl<builder::Input, Input, &builder::Input::onChanged>;
+        if(name == "onChanged") return &builderCallbackImpl<builder::Input, Input, &builder::Input::onChanged>;
 
         return nullptr;
     }

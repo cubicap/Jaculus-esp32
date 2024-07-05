@@ -88,43 +88,43 @@ class CircleWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "color") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "color") {
             *getter = color;
             *setter = setColor;
             return;
         }
-        if(strcmp(name, "fontSize") == 0) {
+        if(name == "fontSize") {
             *getter = fontSize;
             *setter = setFontSize;
             return;
         }
-        if(strcmp(name, "min") == 0) {
+        if(name == "min") {
             *getter = min;
             *setter = setMin;
             return;
         }
-        if(strcmp(name, "max") == 0) {
+        if(name == "max") {
             *getter = max;
             *setter = setMax;
             return;
         }
-        if(strcmp(name, "lineWidth") == 0) {
+        if(name == "lineWidth") {
             *getter = lineWidth;
             *setter = setLineWidth;
             return;
         }
-        if(strcmp(name, "valueStart") == 0) {
+        if(name == "valueStart") {
             *getter = valueStart;
             *setter = setValueStart;
             return;
         }
-        if(strcmp(name, "value") == 0) {
+        if(name == "value") {
             *getter = value;
             *setter = setValue;
             return;
         }
-        if(strcmp(name, "showValue") == 0) {
+        if(name == "showValue") {
             *getter = showValue;
             *setter = setShowValue;
             return;

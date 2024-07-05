@@ -27,15 +27,14 @@ class CameraWidget {
         return jac::Value::from(ctx_, widget.clip()).loot().second;
     }
 
-
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "rotation") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "rotation") {
             *getter = rotation;
             *setter = setRotation;
             return;
         }
-        if(strcmp(name, "clip") == 0) {
+        if(name == "clip") {
             *getter = clip;
             *setter = setClip;
             return;

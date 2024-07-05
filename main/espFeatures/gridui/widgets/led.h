@@ -28,13 +28,13 @@ class LedWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "color") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "color") {
             *getter = color;
             *setter = setColor;
             return;
         }
-        if(strcmp(name, "on") == 0) {
+        if(name == "on") {
             *getter = on;
             *setter = setOn;
             return;

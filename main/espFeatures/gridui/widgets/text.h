@@ -88,43 +88,43 @@ class TextWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "text") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "text") {
             *getter = text;
             *setter = setText;
             return;
         }
-        if(strcmp(name, "fontSize") == 0) {
+        if(name == "fontSize") {
             *getter = fontSize;
             *setter = setFontSize;
             return;
         }
-        if(strcmp(name, "color") == 0) {
+        if(name == "color") {
             *getter = color;
             *setter = setColor;
             return;
         }
-        if(strcmp(name, "background") == 0) {
+        if(name == "background") {
             *getter = background;
             *setter = setBackground;
             return;
         }
-        if(strcmp(name, "align") == 0) {
+        if(name == "align") {
             *getter = align;
             *setter = setAlign;
             return;
         }
-        if(strcmp(name, "valign") == 0) {
+        if(name == "valign") {
             *getter = valign;
             *setter = setValign;
             return;
         }
-        if(strcmp(name, "prefix") == 0) {
+        if(name == "prefix") {
             *getter = prefix;
             *setter = setPrefix;
             return;
         }
-        if(strcmp(name, "suffix") == 0) {
+        if(name == "suffix") {
             *getter = suffix;
             *setter = setSuffix;
             return;

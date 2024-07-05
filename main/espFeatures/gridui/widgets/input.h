@@ -48,23 +48,23 @@ class InputWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "text") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "text") {
             *getter = text;
             *setter = setText;
             return;
         }
-        if(strcmp(name, "color") == 0) {
+        if(name == "color") {
             *getter = color;
             *setter = setColor;
             return;
         }
-        if(strcmp(name, "type") == 0) {
+        if(name == "type") {
             *getter = type;
             *setter = setType;
             return;
         }
-        if(strcmp(name, "disabled") == 0) {
+        if(name == "disabled") {
             *getter = disabled;
             *setter = setDisabled;
             return;

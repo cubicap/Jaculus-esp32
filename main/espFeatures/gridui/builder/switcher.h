@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class SwitcherBuilder {
@@ -31,18 +33,18 @@ class SwitcherBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Switcher>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Switcher, builder::Switcher, Switcher>;
+        if(name == "css") return builderCss<builder::Switcher>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Switcher, builder::Switcher, Switcher>;
 
-        if(strcmp(name, "fontSize") == 0) return fontSize;
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "min") == 0) return min;
-        if(strcmp(name, "max") == 0) return max;
+        if(name == "fontSize") return fontSize;
+        if(name == "color") return color;
+        if(name == "min") return min;
+        if(name == "max") return max;
 
-        if(strcmp(name, "onChanged") == 0) return &builderCallbackImpl<builder::Switcher, Switcher, &builder::Switcher::onChanged>;
+        if(name == "onChanged") return &builderCallbackImpl<builder::Switcher, Switcher, &builder::Switcher::onChanged>;
 
         return nullptr;
     }

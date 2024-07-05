@@ -48,27 +48,27 @@ class JoystickWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "color") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "color") {
             *getter = color;
             *setter = setColor;
             return;
         }
-        if(strcmp(name, "keys") == 0) {
+        if(name == "keys") {
             *getter = keys;
             *setter = setKeys;
             return;
         }
-        if(strcmp(name, "text") == 0) {
+        if(name == "text") {
             *getter = text;
             *setter = setText;
             return;
         }
-        if(strcmp(name, "x") == 0) {
+        if(name == "x") {
             *getter = x;
             return;
         }
-        if(strcmp(name, "y") == 0) {
+        if(name == "y") {
             *getter = y;
             return;
         }

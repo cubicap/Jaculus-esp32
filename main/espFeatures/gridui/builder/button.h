@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class ButtonBuilder {
@@ -49,22 +51,22 @@ class ButtonBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Button>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Button, builder::Button, Button>;
+        if(name == "css") return builderCss<builder::Button>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Button, builder::Button, Button>;
 
-        if(strcmp(name, "text") == 0) return text;
-        if(strcmp(name, "fontSize") == 0) return fontSize;
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "background") == 0) return background;
-        if(strcmp(name, "align") == 0) return align;
-        if(strcmp(name, "valign") == 0) return valign;
-        if(strcmp(name, "disabled") == 0) return disabled;
+        if(name == "text") return text;
+        if(name == "fontSize") return fontSize;
+        if(name == "color") return color;
+        if(name == "background") return background;
+        if(name == "align") return align;
+        if(name == "valign") return valign;
+        if(name == "disabled") return disabled;
 
-        if(strcmp(name, "onPress") == 0) return &builderCallbackImpl<builder::Button, Button, &builder::Button::onPress>;
-        if(strcmp(name, "onRelease") == 0) return &builderCallbackImpl<builder::Button, Button, &builder::Button::onRelease>;
+        if(name == "onPress") return &builderCallbackImpl<builder::Button, Button, &builder::Button::onPress>;
+        if(name == "onRelease") return &builderCallbackImpl<builder::Button, Button, &builder::Button::onRelease>;
 
         return nullptr;
     }

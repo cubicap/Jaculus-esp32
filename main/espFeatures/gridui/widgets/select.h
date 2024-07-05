@@ -58,28 +58,28 @@ class SelectWidget {
     }
 
 public:
-    static void getProperty(const char *name, qjsGetter* getter, qjsSetter *setter) {
-        if(strcmp(name, "color") == 0) {
+    static void getProperty(const AtomString& name, qjsGetter* getter, qjsSetter *setter) {
+        if(name == "color") {
             *getter = color;
             *setter = setColor;
             return;
         }
-        if(strcmp(name, "background") == 0) {
+        if(name == "background") {
             *getter = background;
             *setter = setBackground;
             return;
         }
-        if(strcmp(name, "disabled") == 0) {
+        if(name == "disabled") {
             *getter = disabled;
             *setter = setDisabled;
             return;
         }
-        if(strcmp(name, "options") == 0) {
+        if(name == "options") {
             *getter = options;
             *setter = setOptions;
             return;
         }
-        if(strcmp(name, "selectedIndex") == 0) {
+        if(name == "selectedIndex") {
             *getter = selectedIndex;
             *setter = setSelectedIndex;
             return;

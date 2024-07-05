@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class LedBuilder {
@@ -19,14 +21,14 @@ class LedBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Led>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Led, builder::Led, Led>;
+        if(name == "css") return builderCss<builder::Led>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Led, builder::Led, Led>;
 
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "on") == 0) return on;
+        if(name == "color") return color;
+        if(name == "on") return on;
 
         return nullptr;
     }

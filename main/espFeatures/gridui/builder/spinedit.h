@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class SpinEditBuilder {
@@ -37,19 +39,19 @@ class SpinEditBuilder {
     }
 
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::SpinEdit>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::SpinEdit, builder::SpinEdit, SpinEdit>;
+        if(name == "css") return builderCss<builder::SpinEdit>;
+        if(name == "finish") return builderFinish<WidgetTypeId::SpinEdit, builder::SpinEdit, SpinEdit>;
 
-        if(strcmp(name, "fontSize") == 0) return fontSize;
-        if(strcmp(name, "color") == 0) return color;
-        if(strcmp(name, "value") == 0) return value;
-        if(strcmp(name, "step") == 0) return step;
-        if(strcmp(name, "precision") == 0) return precision;
+        if(name == "fontSize") return fontSize;
+        if(name == "color") return color;
+        if(name == "value") return value;
+        if(name == "step") return step;
+        if(name == "precision") return precision;
 
-        if(strcmp(name, "onChanged") == 0) return &builderCallbackImpl<builder::SpinEdit, SpinEdit, &builder::SpinEdit::onChanged>;
+        if(name == "onChanged") return &builderCallbackImpl<builder::SpinEdit, SpinEdit, &builder::SpinEdit::onChanged>;
 
         return nullptr;
     }

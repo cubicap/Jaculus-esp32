@@ -109,41 +109,43 @@ int GridUiContext::builderGetOwnProperty(JSContext *ctx, JSPropertyDescriptor *d
     }
 
     JSCFunction *getFunc = nullptr;
-    const char *wName = base->widgetTypeName();
-    const char *propName = JS_AtomToCString(ctx, prop);
 
-    if(strcmp(wName, "Arm") == 0) getFunc = ArmBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Bar") == 0) getFunc = BarBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Button") == 0) getFunc = ButtonBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Camera") == 0) getFunc = CameraBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Checkbox") == 0) getFunc = CheckboxBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Circle") == 0) getFunc = CircleBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Input") == 0) getFunc = InputBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Joystick") == 0) getFunc = JoystickBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Led") == 0) getFunc = LedBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Orientation") == 0) getFunc = OrientationBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Select") == 0) getFunc = SelectBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Slider") == 0) getFunc = SliderBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "SpinEdit") == 0) getFunc = SpinEditBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Switcher") == 0) getFunc = SwitcherBuilder::getPropFunc(propName);
-    else if(strcmp(wName, "Text") == 0) getFunc = TextBuilder::getPropFunc(propName);
+    const char *wName = base->widgetTypeName();
+    const int wNameLen = strlen(wName);
+
+    AtomString propName(ctx, prop);
+
+    if(literalEqual(wName, wNameLen, "Arm")) getFunc = ArmBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Bar")) getFunc = BarBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Button")) getFunc = ButtonBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Camera")) getFunc = CameraBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Checkbox")) getFunc = CheckboxBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Circle")) getFunc = CircleBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Input")) getFunc = InputBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Joystick")) getFunc = JoystickBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Led")) getFunc = LedBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Orientation")) getFunc = OrientationBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Select")) getFunc = SelectBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Slider")) getFunc = SliderBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "SpinEdit")) getFunc = SpinEditBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Switcher")) getFunc = SwitcherBuilder::getPropFunc(propName);
+    else if(literalEqual(wName, wNameLen, "Text")) getFunc = TextBuilder::getPropFunc(propName);
     else {
         throw jac::Exception::create(jac::Exception::Type::TypeError, std::string("Invalid type received: ") + wName);
     }
 
     if(getFunc) {
         int argc = 1;
-        if(strcmp(propName, "css") == 0) {
+        if(propName == "css") {
             argc = 2;
         }
 
-        desc->value = JS_NewCFunction(ctx, getFunc, propName, argc);
+        desc->value = JS_NewCFunction(ctx, getFunc, propName.c_str(), argc);
         desc->flags = JS_PROP_ENUMERABLE;
         desc->getter = JS_UNDEFINED;
         desc->setter = JS_UNDEFINED;
     }
 
-    JS_FreeCString(ctx, propName);
     return getFunc ? 1 : 0;
 }
 
@@ -153,10 +155,7 @@ int GridUiContext::widgetGetOwnProperty(JSContext *ctx, JSPropertyDescriptor *de
         return 0;
     }
 
-    auto propNameHolder = std::unique_ptr<const char, std::function<void(const char*)>>(JS_AtomToCString(ctx, prop), [ctx](const char* val) {
-        JS_FreeCString(ctx, val);
-    });
-    const char *propName = propNameHolder.get();
+    AtomString propName(ctx, prop);
 
     qjsGetter getter = nullptr;
     qjsSetter setter = nullptr;
@@ -185,14 +184,14 @@ int GridUiContext::widgetGetOwnProperty(JSContext *ctx, JSPropertyDescriptor *de
     }
 
     if(!getter && !setter) {
-        if(strcmp(propName, "css") == 0) {
-            desc->value = JS_NewCFunction(ctx, WidgetWidget::css, propName, 1);
+        if(propName == "css") {
+            desc->value = JS_NewCFunction(ctx, WidgetWidget::css, propName.c_str(), 1);
             desc->flags = JS_PROP_ENUMERABLE;
             desc->getter = JS_UNDEFINED;
             desc->setter = JS_UNDEFINED;
             return 1;
-        } else if(strcmp(propName, "setCss") == 0) {
-            desc->value = JS_NewCFunction(ctx, WidgetWidget::setCss, propName, 2);
+        } else if(propName == "setCss") {
+            desc->value = JS_NewCFunction(ctx, WidgetWidget::setCss, propName.c_str(), 2);
             desc->flags = JS_PROP_ENUMERABLE;
             desc->getter = JS_UNDEFINED;
             desc->setter = JS_UNDEFINED;
@@ -210,13 +209,13 @@ int GridUiContext::widgetGetOwnProperty(JSContext *ctx, JSPropertyDescriptor *de
     desc->flags = JS_PROP_GETSET;
 
     if(getter) {
-        desc->getter = JS_NewCFunction2(ctx, reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(getter)), propName, 0, JS_CFUNC_getter, 0);
+        desc->getter = JS_NewCFunction2(ctx, reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(getter)), propName.c_str(), 0, JS_CFUNC_getter, 0);
     } else {
         desc->getter = JS_UNDEFINED;
     }
 
     if(setter) {
-        desc->setter = JS_NewCFunction2(ctx, reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(setter)), propName, 1, JS_CFUNC_setter, 0);
+        desc->setter = JS_NewCFunction2(ctx, reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(setter)), propName.c_str(), 1, JS_CFUNC_setter, 0);
     } else {
         desc->setter = JS_UNDEFINED;
     }

@@ -102,6 +102,34 @@ public:
     }
 };
 
+template<int size>
+inline bool literalEqual(const char *c_str, int c_str_size, const char (&literal)[size]) {
+    return c_str_size == size-1 && memcmp(c_str, literal, size-1) == 0;
+}
+
+class AtomString {
+    JSContext *_ctx;
+    const char *_value;
+    int _valueLen;
+
+    AtomString(AtomString&) = delete;
+public:
+    AtomString(JSContext *ctx, JSAtom atom) : _ctx(ctx), _value(JS_AtomToCString(ctx, atom)) {
+        _valueLen = strlen(_value);
+    }
+
+    ~AtomString() {
+        JS_FreeCString(_ctx, _value);
+    }
+
+    const char *c_str() const { return _value; }
+
+    template<int size>
+    inline bool operator==(const char (&literal)[size]) const {
+        return literalEqual<size>(_value, _valueLen, literal);
+    }
+};
+
 template<typename BuilderT>
 inline BuilderT& builderOpaque(JSValueConst thisVal) {
     return *reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, GridUiContext::builderClassId()));

@@ -3,6 +3,8 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class CameraBuilder {
@@ -18,15 +20,16 @@ class CameraBuilder {
         return JS_DupValue(ctx_, thisVal);
     }
 
+
 public:
-    static JSCFunction *getPropFunc(const char *name) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        if(strcmp(name, "css") == 0) return builderCss<builder::Camera>;
-        if(strcmp(name, "finish") == 0) return builderFinish<WidgetTypeId::Camera, builder::Camera, Camera>;
+        if(name == "css") return builderCss<builder::Camera>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Camera, builder::Camera, Camera>;
 
-        if(strcmp(name, "rotation") == 0) return rotation;
-        if(strcmp(name, "clip") == 0) return clip;
+        if(name == "rotation") return rotation;
+        if(name == "clip") return clip;
 
         return nullptr;
     }
