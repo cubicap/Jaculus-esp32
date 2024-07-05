@@ -78,7 +78,8 @@ echo "            }," >> $manifest
 echo "            {" >> $manifest
 echo "                \"name\": \"storage\"," >> $manifest
 echo "                \"address\": \"0x2D000\"," >> $manifest
-echo "                \"file\": \"storage.bin\"" >> $manifest
+echo "                \"file\": \"storage.bin\"," >> $manifest
+echo "                \"isStorage\": true" >> $manifest
 echo "            }" >> $manifest
 echo "        ]" >> $manifest
 echo "    }" >> $manifest
