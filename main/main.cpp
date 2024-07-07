@@ -83,7 +83,7 @@ using Machine = jac::ComposeMachine<
     SimpleRadioFeature,
     WifiFeature,
     GridUiFeature,
-    KeyValueFeature,
+    jac::KeyValueFeature,
     jac::EventLoopTerminal
 >;
 
