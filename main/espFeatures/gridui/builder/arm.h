@@ -2,31 +2,32 @@
 
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
-#include "../widgets/arm.h"
+
+#include "../widgets/_common.h"
 
 namespace gridui_jac {
 
 class ArmBuilder {
     static JSValue info(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Arm*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Arm>(thisVal);
         auto json = jac::ValueWeak(ctx_, argv[0]).to<std::string>();
         builder.info(std::unique_ptr<rbjson::Object>(rbjson::parse((char*)json.c_str(), json.size())));
         return JS_DupValue(ctx_, thisVal);
     }
 
-
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(name == "css") return builderCss<builder::Arm>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Arm, builder::Arm, Arm>;
 
-        proto.set("info", jac::Value(ctx, JS_NewCFunction(ctx, info, "info", 1)));
+        if(name == "info") return info;
 
-        defineBuilderCallback<builder::Arm, Arm, &builder::Arm::onGrab>(ctx, proto, "onGrab");
-        defineBuilderCallback<builder::Arm, Arm, &builder::Arm::onPositionChanged>(ctx, proto, "onPositionChanged");
+        if(name == "onGrab") return &builderCallbackImpl<builder::Arm, Arm, &builder::Arm::onGrab>;
+        if(name == "onPositionChanged") return &builderCallbackImpl<builder::Arm, Arm, &builder::Arm::onPositionChanged>;
 
-        return proto;
+        return nullptr;
     }
 };
 

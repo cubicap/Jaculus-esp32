@@ -137,7 +137,6 @@ declare module "gridui" {
     namespace builder {
         interface Base {
             css(key: string, value: string): this
-            finish(): this
         }
 
         interface Arm extends Base {
@@ -145,6 +144,8 @@ declare module "gridui" {
 
             onGrab(callback: (arm: widget.Arm) => void): Arm
             onPositionChanged(callback: (arm: widget.Arm) => void): Arm
+
+            finish(): widget.Arm
         }
 
         interface Bar extends Base {
@@ -154,6 +155,8 @@ declare module "gridui" {
             max(max: number): Bar
             value(value: number): Bar
             showValue(showValue: boolean): Bar
+
+            finish(): widget.Bar
         }
 
         interface Button extends Base {
@@ -167,12 +170,16 @@ declare module "gridui" {
 
             onPress(callback: (button: widget.Button) => void): Button
             onRelease(callback: (button: widget.Button) => void): Button
+
+            finish(): widget.Button
         }
 
         interface Camera extends Base {
             rotation(rotation: number): Camera
             clip(clip: boolean): Camera
             tags(tags: any /* TODO: fix type */): Camera
+
+            finish(): widget.Camera
         }
 
         interface Checkbox extends Base {
@@ -182,6 +189,8 @@ declare module "gridui" {
             text(text: string): Checkbox
 
             onChanged(callback: (checkbox: widget.Checkbox) => void): Checkbox
+
+            finish(): widget.Checkbox
         }
 
         interface Circle extends Base {
@@ -193,6 +202,8 @@ declare module "gridui" {
             valueStart(valueStart: number): Circle
             value(value: number): Circle
             showValue(showValue: boolean): Circle
+
+            finish(): widget.Circle
         }
 
         interface Input extends Base {
@@ -202,6 +213,8 @@ declare module "gridui" {
             disabled(disabled: boolean): Input
 
             onChanged(callback: (input: widget.Input) => void): Input
+
+            finish(): widget.Input
         }
 
         interface Joystick extends Base {
@@ -211,17 +224,23 @@ declare module "gridui" {
 
             onClick(callback: (joystick: widget.Joystick) => void): Joystick
             onPositionChanged(callback: (joystick: widget.Joystick) => void): Joystick
+
+            finish(): widget.Joystick
         }
 
         interface Led extends Base {
             color(color: string): Led
             on(on: boolean): Led
+
+            finish(): widget.Led
         }
 
         interface Orientation extends Base {
             color(color: string): Orientation
 
             onPositionChanged(callback: (orientation: widget.Orientation) => void): Orientation
+
+            finish(): widget.Orientation
         }
 
         interface Select extends Base {
@@ -232,6 +251,8 @@ declare module "gridui" {
             selectedIndex(selectedIndex: number): Select
 
             onChanged(callback: (select: widget.Select) => void): Select
+
+            finish(): widget.Select
         }
 
         interface Slider extends Base {
@@ -244,6 +265,8 @@ declare module "gridui" {
             showValue(showValue: boolean): Slider
 
             onChanged(callback: (slider: widget.Slider) => void): Slider
+
+            finish(): widget.Slider
         }
 
         interface SpinEdit extends Base {
@@ -254,6 +277,8 @@ declare module "gridui" {
             precision(precision: number): SpinEdit
 
             onChanged(callback: (spinEdit: widget.SpinEdit) => void): SpinEdit
+
+            finish(): widget.SpinEdit
         }
 
         interface Switcher extends Base {
@@ -264,6 +289,8 @@ declare module "gridui" {
             max(max: number): Switcher
 
             onChanged(callback: (switcher: widget.Switcher) => void): Switcher
+
+            finish(): widget.Switcher
         }
 
         interface Text extends Base {
@@ -275,9 +302,9 @@ declare module "gridui" {
             valign(valign: string): Text
             prefix(prefix: string): Text
             suffix(suffix: string): Text
-        }
 
-        interface Widget extends Base {}
+            finish(): widget.Text
+        }
     }
 
     class Builder {
@@ -296,7 +323,6 @@ declare module "gridui" {
         spinEdit(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.SpinEdit
         switcher(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Switcher
         text(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Text
-        widget(x: number, y: number, w: number, h: number, uuid?: number, tab?: number): builder.Widget
     }
 
     /**
@@ -311,6 +337,16 @@ declare module "gridui" {
      * Stop GridUI.
      */
     function end(): void
+
+    /**
+     * Set current tab index
+     */
+    function changeTab(index: number): void
+
+    /**
+     * Send a message to the integrated terminal at the top of the UI.
+     */
+    function log(message: string): void
 
     /**
      * Returns included GridUI version as number, to be compared with hex representation of the version.

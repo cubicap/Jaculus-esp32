@@ -3,41 +3,44 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class JoystickBuilder {
     static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Joystick*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Joystick>(thisVal);
         builder.color(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue keys(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Joystick*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Joystick>(thisVal);
         builder.keys(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue text(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Joystick*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Joystick>(thisVal);
         builder.text(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(name == "css") return builderCss<builder::Joystick>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Joystick, builder::Joystick, Joystick>;
 
-        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
-        proto.set("keys", jac::Value(ctx, JS_NewCFunction(ctx, keys, "keys", 1)));
-        proto.set("text", jac::Value(ctx, JS_NewCFunction(ctx, text, "text", 1)));
+        if(name == "color") return color;
+        if(name == "keys") return keys;
+        if(name == "text") return text;
 
-        defineBuilderCallback<builder::Joystick, Joystick, &builder::Joystick::onClick>(ctx, proto, "onClick");
-        defineBuilderCallback<builder::Joystick, Joystick, &builder::Joystick::onPositionChanged>(ctx, proto, "onPositionChanged");
+        if(name == "onClick") return &builderCallbackImpl<builder::Joystick, Joystick, &builder::Joystick::onClick>;
+        if(name == "onPositionChanged") return &builderCallbackImpl<builder::Joystick, Joystick, &builder::Joystick::onPositionChanged>;
 
-        return proto;
+        return nullptr;
     }
 };
 

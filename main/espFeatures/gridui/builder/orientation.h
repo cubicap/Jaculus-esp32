@@ -3,26 +3,29 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class OrientationBuilder {
     static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Orientation*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Orientation>(thisVal);
         builder.color(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(name == "css") return builderCss<builder::Orientation>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Orientation, builder::Orientation, Orientation>;
 
-        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
+        if(name == "color") return color;
 
-        defineBuilderCallback<builder::Orientation, Orientation, &builder::Orientation::onPositionChanged>(ctx, proto, "onPositionChanged");
+        if(name == "onPositionChanged") return &builderCallbackImpl<builder::Orientation, Orientation, &builder::Orientation::onPositionChanged>;
 
-        return proto;
+        return nullptr;
     }
 };
 

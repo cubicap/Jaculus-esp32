@@ -3,68 +3,71 @@
 #include <jac/machine/functionFactory.h>
 #include <gridui.h>
 
+#include "../widgets/_common.h"
+
 namespace gridui_jac {
 
 class SliderBuilder {
     static JSValue color(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Slider*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Slider>(thisVal);
         builder.color(jac::ValueWeak(ctx_, argv[0]).to<std::string>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue fontSize(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Slider*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Slider>(thisVal);
         builder.fontSize(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue min(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Slider*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Slider>(thisVal);
         builder.min(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue max(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Slider*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Slider>(thisVal);
         builder.max(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue value(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Slider*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Slider>(thisVal);
         builder.value(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue precision(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Slider*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Slider>(thisVal);
         builder.precision(jac::ValueWeak(ctx_, argv[0]).to<float>());
         return JS_DupValue(ctx_, thisVal);
     }
 
     static JSValue showValue(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-        auto& builder = *reinterpret_cast<gridui::builder::Slider*>(JS_GetOpaque(thisVal, 1));
+        auto& builder = builderOpaque<gridui::builder::Slider>(thisVal);
         builder.showValue(jac::ValueWeak(ctx_, argv[0]).to<bool>());
         return JS_DupValue(ctx_, thisVal);
     }
 
 public:
-    static jac::Object proto(jac::ContextRef ctx) {
+    static JSCFunction *getPropFunc(const AtomString& name) {
         using namespace gridui;
 
-        auto proto = jac::Object::create(ctx);
+        if(name == "css") return builderCss<builder::Slider>;
+        if(name == "finish") return builderFinish<WidgetTypeId::Slider, builder::Slider, Slider>;
 
-        proto.set("color", jac::Value(ctx, JS_NewCFunction(ctx, color, "color", 1)));
-        proto.set("fontSize", jac::Value(ctx, JS_NewCFunction(ctx, fontSize, "fontSize", 1)));
-        proto.set("min", jac::Value(ctx, JS_NewCFunction(ctx, min, "min", 1)));
-        proto.set("max", jac::Value(ctx, JS_NewCFunction(ctx, max, "max", 1)));
-        proto.set("value", jac::Value(ctx, JS_NewCFunction(ctx, value, "value", 1)));
-        proto.set("precision", jac::Value(ctx, JS_NewCFunction(ctx, precision, "precision", 1)));
-        proto.set("showValue", jac::Value(ctx, JS_NewCFunction(ctx, showValue, "showValue", 1)));
+        if(name == "color") return color;
+        if(name == "fontSize") return fontSize;
+        if(name == "min") return min;
+        if(name == "max") return max;
+        if(name == "value") return value;
+        if(name == "precision") return precision;
+        if(name == "showValue") return showValue;
 
-        defineBuilderCallback<builder::Slider, Slider, &builder::Slider::onChanged>(ctx, proto, "onChanged");
+        if(name == "onChanged") return &builderCallbackImpl<builder::Slider, Slider, &builder::Slider::onChanged>;
 
-        return proto;
+        return nullptr;
     }
 };
 

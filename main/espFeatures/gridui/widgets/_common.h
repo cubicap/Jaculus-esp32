@@ -28,10 +28,6 @@ enum class WidgetTypeId : uint16_t {
 };
 
 class GridUiContext {
-    static constexpr const uint16_t _builderOffset = 1000;
-
-    std::map<uint16_t, jac::Object> _protoCache;
-
     struct __attribute__ ((packed)) HandlerWidgetItem {
         JSValue object;
         uint16_t uuid;
@@ -39,6 +35,16 @@ class GridUiContext {
     std::vector<HandlerWidgetItem> _handlerWidgets;
 
     std::function<void(std::function<void()>)> _scheduleEvent;
+
+    static JSClassID _builderClassId;
+    static JSClassID _widgetClassId;
+
+    static JSClassExoticMethods builderExotic;
+    static int builderGetOwnProperty(JSContext *ctx, JSPropertyDescriptor *desc, JSValueConst obj, JSAtom prop);
+    static JSClassExoticMethods widgetExotic;
+    static int widgetGetOwnProperty(JSContext *ctx, JSPropertyDescriptor *desc, JSValueConst obj, JSAtom prop);
+
+    GridUiContext() {}
 
 public:
     static GridUiContext& get() {
@@ -56,6 +62,10 @@ public:
         }
     }
 
+    void createClasses(jac::ContextRef context);
+    static JSClassID builderClassId() { return _builderClassId; }
+    static JSClassID widgetClassId() { return _widgetClassId; }
+
     void clear(jac::ContextRef ctx) {
         clearProtos();
 
@@ -67,43 +77,7 @@ public:
     }
 
     void clearProtos() {
-        _protoCache.clear();
         _handlerWidgets.shrink_to_fit();
-    }
-
-    jac::Object getProto(jac::ContextRef ctx, WidgetTypeId typeId, bool isBuilder, std::function<jac::Object(jac::ContextRef)> createNewProto) {
-        auto cacheKey = static_cast<uint16_t>(typeId);
-        if(isBuilder) {
-            cacheKey += _builderOffset;
-        }
-        auto itr = _protoCache.find(cacheKey);
-        if(itr != _protoCache.end()) {
-            return itr->second;
-        }
-
-        auto proto = createNewProto(ctx);
-        _protoCache.emplace(cacheKey, proto);
-        return proto;
-    }
-
-    jac::Object buildObj(jac::ContextRef ctx, WidgetTypeId typeId, bool isBuilder, void *opaque, std::function<jac::Object(jac::ContextRef)> createNewProto) {
-        auto cacheKey = static_cast<uint16_t>(typeId);
-        if(isBuilder) {
-            cacheKey += _builderOffset;
-        }
-
-        auto obj = jac::Object::create(ctx);
-        JS_SetOpaque(obj.getVal(), opaque);
-        obj.setPrototype(getProto(ctx, typeId, isBuilder, createNewProto));
-
-        if(!isBuilder) {
-            auto widget = reinterpret_cast<gridui::Widget*>(opaque);
-            if(widget->hasRegisteredCallbacks()) {
-                addHandlerWidget(widget->uuid(), obj);
-            }
-        }
-
-        return obj;
     }
 
     void addHandlerWidget(uint16_t uuid, jac::Object obj) {
@@ -128,32 +102,52 @@ public:
     }
 };
 
+template<int size>
+inline bool literalEqual(const char *c_str, int c_str_size, const char (&literal)[size]) {
+    return c_str_size == size-1 && memcmp(c_str, literal, size-1) == 0;
+}
+
+class AtomString {
+    JSContext *_ctx;
+    const char *_value;
+    int _valueLen;
+
+    AtomString(AtomString&) = delete;
+public:
+    AtomString(JSContext *ctx, JSAtom atom) : _ctx(ctx), _value(JS_AtomToCString(ctx, atom)) {
+        _valueLen = strlen(_value);
+    }
+
+    ~AtomString() {
+        JS_FreeCString(_ctx, _value);
+    }
+
+    const char *c_str() const { return _value; }
+
+    template<int size>
+    inline bool operator==(const char (&literal)[size]) const {
+        return literalEqual<size>(_value, _valueLen, literal);
+    }
+};
+
+template<typename BuilderT>
+inline BuilderT& builderOpaque(JSValueConst thisVal) {
+    return *reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, GridUiContext::builderClassId()));
+}
+
+
+template<typename WidgetT>
+inline WidgetT& widgetOpaque(JSValueConst thisVal) {
+    return *reinterpret_cast<WidgetT*>(JS_GetOpaque(thisVal, GridUiContext::widgetClassId()));
+}
+
+
 using qjsGetter = JSValue(*)(JSContext* ctx_, JSValueConst thisVal);
 using qjsSetter = JSValue(*)(JSContext* ctx_, JSValueConst thisVal, JSValueConst val);
 
-static inline void defineWidgetProperty(jac::ContextRef ctx, jac::Object& target,
-    const char *name, const char *setterName,
-    qjsGetter getter, qjsSetter setter) {
-
-    auto jsGetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(getter)), name, 0, JS_CFUNC_getter, 0);
-    auto jsSetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(setter)), setterName, 1, JS_CFUNC_setter, 0);
-
-    JS_DefinePropertyGetSet(
-        ctx.get(), target.getVal(),
-        jac::Atom::create(ctx, name).get(), 
-        jsGetter, jsSetter, 0
-    );
-}
-
-static inline void defineWidgetPropertyReadOnly(jac::ContextRef ctx, jac::Object& target, const char *name, qjsGetter getter) {
-    auto jsGetter = JS_NewCFunction2(ctx.get(), reinterpret_cast<JSCFunction*>(reinterpret_cast<void*>(getter)), name, 0, JS_CFUNC_getter, 0);
-    JS_DefineProperty(ctx, target.getVal(), jac::Atom::create(ctx, name).get(), JS_UNDEFINED, jsGetter, JS_UNDEFINED, JS_PROP_HAS_GET | JS_PROP_HAS_ENUMERABLE);
-    JS_FreeValue(ctx, jsGetter);
-}
-
 template<typename BuilderT, typename WidgetT, auto setter>
-static JSValue builderCallbackImpl(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
-    auto *builder = reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, 1));
+JSValue builderCallbackImpl(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+    auto *builder = reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, GridUiContext::builderClassId()));
     auto callback = jac::Function(ctx_, JS_DupValue(ctx_, argv[0]));
 
     (builder->*setter)([ctx_, callback](WidgetT& widget) {
@@ -166,9 +160,32 @@ static JSValue builderCallbackImpl(JSContext* ctx_, JSValueConst thisVal, int ar
     return JS_DupValue(ctx_, thisVal);
 }
 
-template<typename BuilderT, typename WidgetT, auto setter>
-static inline void defineBuilderCallback(jac::ContextRef ctx, jac::Object& target, const char *name) {
-    target.set(name, jac::Value(ctx, JS_NewCFunction(ctx, &builderCallbackImpl<BuilderT, WidgetT, setter>, name, 1)));
+template<typename BuilderT>
+JSValue builderCss(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+    auto& builder = *reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, GridUiContext::builderClassId()));
+    builder.css(jac::ValueWeak(ctx_, argv[0]).to<std::string>(), jac::ValueWeak(ctx_, argv[1]).to<std::string>());
+    return JS_DupValue(ctx_, thisVal);
+}
+
+
+template<WidgetTypeId typeId, typename BuilderT, typename WidgetT>
+JSValue builderFinish(JSContext* ctx_, JSValueConst thisVal, int argc, JSValueConst* argv) {
+    auto& builder = *reinterpret_cast<BuilderT*>(JS_GetOpaque(thisVal, GridUiContext::builderClassId()));
+
+    auto widget = new WidgetT(std::move(builder.finish()));
+
+    auto proto = jac::Value(ctx_, JS_GetClassProto(ctx_, GridUiContext::widgetClassId()));
+
+    JSValue obj = JS_NewObjectProtoClass(ctx_, proto.getVal(), GridUiContext::widgetClassId());
+
+    JS_SetOpaque(obj, widget);
+    JS_DefinePropertyValueUint32(ctx_, obj, 0, JS_NewUint32(ctx_, static_cast<uint32_t>(typeId)), JS_PROP_NO_EXOTIC);
+
+    if(widget->hasRegisteredCallbacks()) {
+        GridUiContext::get().addHandlerWidget(widget->uuid(), jac::Object(ctx_, JS_DupValue(ctx_, obj)));
+    }
+
+    return obj;
 }
 
 };
