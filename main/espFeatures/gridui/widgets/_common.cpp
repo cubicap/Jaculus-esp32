@@ -84,7 +84,7 @@ void GridUiContext::createClasses(jac::ContextRef context) {
         .exotic = &builderExotic,
     };
     JS_NewClass(rt, _builderClassId, &builderClassDef);
-    JS_SetClassProto(context.get(), _widgetClassId, JS_DupValue(context.get(), proto));
+    JS_SetClassProto(context.get(), _builderClassId, JS_DupValue(context.get(), proto));
 
     if(_widgetClassId == 0) {
         JS_NewClassID(&_widgetClassId);
