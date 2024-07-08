@@ -94,6 +94,32 @@ std::string EspNvsKeyValue::getString(const std::string& name, std::string def_v
     return result;
 }
 
+jac::KeyValueNamespace::DataType EspNvsKeyValue::getType(const std::string& name) {
+    DataType typ = DataType::NOT_FOUND;
+
+    nvs_iterator_t it = NULL;
+    esp_err_t res = nvs_entry_find(NVS_DEFAULT_PART_NAME, _nsname.c_str(), NVS_TYPE_ANY, &it);
+    while(res == ESP_OK) {
+        nvs_entry_info_t info;
+        nvs_entry_info(it, &info);
+
+        if(name == info.key) {
+            switch(info.type) {
+                case NVS_TYPE_I64: typ = DataType::INT64; break;
+                case NVS_TYPE_U32: typ = DataType::FLOAT32; break;
+                case NVS_TYPE_STR: typ = DataType::STRING; break;
+                default: break;
+            }
+            break;
+        }
+
+        res = nvs_entry_next(&it);
+    }
+    nvs_release_iterator(it);
+
+    return typ;
+}
+
 bool EspNvsKeyValue::commit() {
     auto res = nvs_commit(_handle);
     if(res != ESP_OK) {

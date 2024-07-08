@@ -9,6 +9,7 @@
 
 #include <jac/device/device.h>
 #include <jac/device/logger.h>
+#include <jac/features/keyvalueFeature.h>
 #include <jac/features/util/linkIo.h>
 
 #include <jac/link/mux.h>
@@ -26,6 +27,7 @@
 #include "espFeatures/timestampFeature.h"
 #include "espFeatures/wifiFeature.h"
 #include "espFeatures/gridui/gridUiFeature.h"
+#include "espFeatures/motorFeature.h"
 
 #include "platform/espNvsKeyValue.h"
 #include "platform/espWifi.h"
@@ -80,8 +82,10 @@ using Machine = jac::ComposeMachine<
     SmartLedFeature,
     PulseCounterFeature,
     SimpleRadioFeature,
+    MotorFeature,
     WifiFeature,
     GridUiFeature,
+    jac::KeyValueFeature,
     jac::EventLoopTerminal
 >;
 
@@ -217,6 +221,8 @@ int main() {
         machine.stdio.out = std::make_unique<jac::LinkWritable>(device.machineIO().out.get());
         machine.stdio.err = std::make_unique<jac::LinkWritable>(device.machineIO().err.get());
         machine.stdio.in = std::make_unique<jac::LinkReadable<Machine>>(&machine, device.machineIO().in.get());
+
+        machine.kvOpener = device.getKeyValueOpener();
 
         esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
         cfg.stack_size = 2 * 1024;

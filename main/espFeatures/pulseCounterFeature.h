@@ -184,6 +184,7 @@ public:
             _channel = nullptr;
         }
         if (_unit != nullptr) {
+            pcnt_unit_disable(_unit);
             pcnt_del_unit(_unit);
             _unit = nullptr;
         }
