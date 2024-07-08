@@ -267,6 +267,7 @@ public:
         MotorClass::init("Motor");
     }
 
+#if not defined(CONFIG_IDF_TARGET_ESP32C3)
     ~MotorFeature() {
         for(auto& motor : _motors) {
             auto& jsdcMotor = *MotorProtoBuilder<MotorFeature<Next>>::getOpaque(this->context(), motor);
@@ -287,6 +288,7 @@ public:
             ++itr;
         }
     }
+#endif
 
     void initialize() {
         Next::initialize();
