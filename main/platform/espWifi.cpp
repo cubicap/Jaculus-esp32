@@ -351,6 +351,8 @@ void EspWifiController::eventHandlerWifi(void* selfVoid, esp_event_base_t event_
                     break;
                 }
 
+                // kv key len limits us, use prefix match
+                rec.ssid[15] = 0;
                 auto pass = wifiNs->getString((const char*)rec.ssid, not_exists_sentinel);
                 if(pass == not_exists_sentinel) {
                     continue;
