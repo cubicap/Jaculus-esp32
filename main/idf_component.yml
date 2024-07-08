@@ -13,3 +13,6 @@ dependencies:
   Esp32-RBGridUI:
     git: https://github.com/RoboticsBrno/Esp32-RBGridUI.git
     version: v5.2.8
+  Esp32-DCMotor:
+    git: https://github.com/RoboticsBrno/Esp32-DCMotor.git
+    version: v0.0.1

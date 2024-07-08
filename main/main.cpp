@@ -27,6 +27,7 @@
 #include "espFeatures/timestampFeature.h"
 #include "espFeatures/wifiFeature.h"
 #include "espFeatures/gridui/gridUiFeature.h"
+#include "espFeatures/motorFeature.h"
 
 #include "platform/espNvsKeyValue.h"
 #include "platform/espWifi.h"
@@ -81,6 +82,7 @@ using Machine = jac::ComposeMachine<
     SmartLedFeature,
     PulseCounterFeature,
     SimpleRadioFeature,
+    MotorFeature,
     WifiFeature,
     GridUiFeature,
     jac::KeyValueFeature,
