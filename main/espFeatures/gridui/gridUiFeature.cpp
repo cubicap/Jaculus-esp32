@@ -74,13 +74,13 @@ void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::st
     // will abort if the WiFi is disabled.
     esp_netif_init();
 
+    rb_web_set_not_found_callback(gridui::webserverNotFoundCallback);
+
     // Start serving the web page
     _webServerTask = rb_web_start_no_spiffs(80, "/data");
     if(_webServerTask == NULL) {
         throw jac::Exception::create(jac::Exception::Type::InternalError, "failed to call rb_web_start_no_spiffs");
     }
-
-    rb_web_set_not_found_callback(gridui::webserverNotFoundCallback);
 
     _ownerName = ownerName;
     _deviceName = deviceName;
@@ -93,11 +93,12 @@ void GridUiHolder::begin(jac::ContextRef context, std::string ownerName, std::st
     );
     _protocol->start();
 
-    if(EspWifiController::get().mode() == EspWifiController::AP) {
+    // Disabled due to memory constraints
+    /*if(EspWifiController::get().mode() == EspWifiController::AP) {
         rb::DnsServer::get().start("esp32.local", [](){
             return EspWifiController::get().currentIp().addr;
         });
-    }
+    }*/
 
     UI.begin(_protocol.get());
     GridUiContext::get().createClasses(context);
