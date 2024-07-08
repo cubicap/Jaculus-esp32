@@ -86,12 +86,12 @@ struct JSDCMotor {
     std::optional<DCMotor> motor;
     std::optional<PromiseFunctions> pendingPromise;
     int encTicks;
-    double diameter;
+    double circumference;
 
     template<typename Feature>
-    JSDCMotor(MotorPins<Feature> pins, int regP, LedcConfig<Feature> ledcConf, int encTicks, double diameter):
+    JSDCMotor(MotorPins<Feature> pins, int regP, LedcConfig<Feature> ledcConf, int encTicks, double circumference):
         motor(std::in_place, pins.motA, pins.motB, pins.encA, pins.encB, regP, ledcConf.timer, ledcConf.channelA, ledcConf.channelB),
-        encTicks(encTicks), diameter(diameter)
+        encTicks(encTicks), circumference(circumference)
     {
         motor->startTicker();
     }
@@ -115,12 +115,12 @@ public:
         auto options = args[0].to<jac::Object>();
         auto pins = options.get("pins").to<MotorPins<Feature>>();
         auto encTicks = options.get("encTicks").to<int>();
-        auto diameter = options.get("diameter").to<double>();
+        auto circumference = options.get("circumference").to<double>();
 
         auto ledcConf = options.get("ledc").to<LedcConfig<Feature>>();
 
         auto machine = reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
-        std::unique_ptr<JSDCMotor> mot = std::make_unique<JSDCMotor>(pins, 50, ledcConf, encTicks, diameter);
+        std::unique_ptr<JSDCMotor> mot = std::make_unique<JSDCMotor>(pins, 50, ledcConf, encTicks, circumference);
         mot->motor->onTarget([mot = mot.get(), machine]() {
             static constexpr auto resolve = +[](void* data) {
                 JSDCMotor* mot = reinterpret_cast<JSDCMotor*>(data);
@@ -149,7 +149,7 @@ public:
                 throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
             }
 
-            int ticksPerSec = motor.encTicks * speed / (motor.diameter * std::numbers::pi);
+            int ticksPerSec = motor.encTicks * speed / (motor.circumference);
             motor.motor->setSpeed(ticksPerSec);
         }), jac::PropFlags::Enumerable);
 
@@ -171,7 +171,7 @@ public:
 
                 if (duration.hasProperty("distance")) {
                     double distance = duration.get("distance").to<double>();
-                    int64_t ticks = motor.encTicks * distance / (motor.diameter * std::numbers::pi);
+                    int64_t ticks = motor.encTicks * distance / (motor.circumference);
                     motor.motor->moveDistance(ticks);
                 }
                 else if (duration.hasProperty("time")) {
@@ -214,7 +214,7 @@ public:
             }
 
             int64_t ticks = motor.motor->getPosition();
-            return jac::Value::from(ctx, static_cast<double>(ticks) * motor.diameter * std::numbers::pi / motor.encTicks);
+            return jac::Value::from(ctx, static_cast<double>(ticks) * motor.circumference / motor.encTicks);
         }), jac::PropFlags::Enumerable);
 
         proto.defineProperty("close", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {

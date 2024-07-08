@@ -16,7 +16,7 @@ let left = new Motor({
         channelB: 1
     },
     encTicks: 406,  // ticks per revolution
-    diameter: 34  // mm
+    circumference: 34 * Math.PI  // mm
 });
 
 let right = new Motor({
@@ -32,7 +32,7 @@ let right = new Motor({
         channelB: 3
     },
     encTicks: 406,  // ticks per revolution
-    diameter: 34  // mm
+    circumference: 34 * Math.PI  // mm
 });
 
 setInterval(() => {

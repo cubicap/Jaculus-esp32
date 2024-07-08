@@ -22,14 +22,14 @@ declare module "motor" {
         /**
          * Construc a new Motor instance
          * @param options Motor configuration
-         * @note Units used in the diameter parameter determines the units used in the other methods
+         * @note Units used in the circumference parameter determines the units used in the other methods
          */
-        constructor(options: { pins: MotorPins, ledc: LedcConfig, encTicks: number, diameter: number });
+        constructor(options: { pins: MotorPins, ledc: LedcConfig, encTicks: number, circumference: number });
 
         /**
          * Set the speed of the motor
          * @param speed Speed in units per second
-         * @note The units are the same as used in the diameter parameter
+         * @note The units are the same as used in the circumference parameter
          */
         setSpeed(speed: number): void;
         // setRamp(ramp: number): void;
@@ -37,7 +37,7 @@ declare module "motor" {
         /**
          * Move the motor
          * @param duration Duration of the movement
-         * @note The units are the same as used in the diameter parameter
+         * @note The units are the same as used in the circumference parameter
          * @note If the duration is not provided, the motor will move indefinitely
          */
         move(duration?: MoveDuration): Promise<void>;
@@ -50,7 +50,7 @@ declare module "motor" {
 
         /**
          * Get the position of the motor
-         * @note The units are the same as used in the diameter parameter
+         * @note The units are the same as used in the circumference parameter
          * @returns The position of the motor
          */
         getPosition(): number;
