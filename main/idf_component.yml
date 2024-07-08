@@ -15,4 +15,4 @@ dependencies:
     version: v5.3.0
   Esp32-DCMotor:
     git: https://github.com/RoboticsBrno/Esp32-DCMotor.git
-    version: v0.0.1
+    version: v0.0.2
