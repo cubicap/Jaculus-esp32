@@ -97,9 +97,15 @@ struct JSDCMotor {
     }
 
     ~JSDCMotor() {
+        clear();
+    }
+
+    void clear() {
         if (motor) {
             motor->stopTicker();
+            motor.reset();
         }
+        pendingPromise.reset();
     }
 };
 
@@ -223,16 +229,16 @@ public:
                 throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
             }
 
-            motor.motor.reset();
+            motor.clear();
 
             auto machine = reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
-            machine->releaseLifetime(thisVal);
+            machine->unregisterMotor(thisVal);
         }), jac::PropFlags::Enumerable);
     }
 
     static void postConstruction(jac::ContextRef ctx, jac::Object thisVal, std::vector<jac::ValueWeak> args) {
         auto machine = reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
-        machine->extendLifetime(thisVal);
+        machine->registerMotor(thisVal);
     }
 };
 
@@ -246,6 +252,7 @@ struct NonexistentMotorProtoBuilder {
 
 template<typename Next>
 class MotorFeature : public Next {
+    std::vector<jac::Object> _motors;
 public:
 
 #if defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -254,9 +261,34 @@ public:
     using MotorClass = jac::Class<MotorProtoBuilder<MotorFeature<Next>>>;
 #endif
 
+
+
     MotorFeature() {
         MotorClass::init("Motor");
     }
+
+#if not defined(CONFIG_IDF_TARGET_ESP32C3)
+    ~MotorFeature() {
+        for(auto& motor : _motors) {
+            auto& jsdcMotor = *MotorProtoBuilder<MotorFeature<Next>>::getOpaque(this->context(), motor);
+            jsdcMotor.clear();
+        }
+    }
+
+    void registerMotor(jac::Object motor) {
+        _motors.emplace_back(motor);
+    }
+
+    void unregisterMotor(jac::ValueWeak motor) {
+        for(auto itr = _motors.begin(); itr != _motors.end();) {
+            if(itr->getVal() == motor.getVal()) {
+                _motors.erase(itr);
+                return;
+            }
+            ++itr;
+        }
+    }
+#endif
 
     void initialize() {
         Next::initialize();
