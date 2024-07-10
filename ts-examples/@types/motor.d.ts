@@ -1,9 +1,6 @@
 declare module "motor" {
 
-    type MoveDuration = {
-        distance?: number;
-        time?: number;
-    }
+    type MoveDuration = { distance: number; } | { time: number; } | { };
 
     type MotorPins = {
         motA: number;
