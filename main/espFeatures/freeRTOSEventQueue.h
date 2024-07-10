@@ -126,6 +126,15 @@ private:
         }
     }
 
+    void drain() {
+        while(true) {
+            Event e;
+            if(xQueueReceive(_eventQueue, &e, 0) == pdFALSE) {
+                break;
+            }
+        }
+    }
+
     void _scheduleImpl(auto&&... args) {
         Event e(std::forward<decltype(args)>(args)...);
         auto res = xQueueSend(_eventQueue, &e, portMAX_DELAY);
@@ -217,8 +226,7 @@ public:
     }
 
     ~FreeRTOSEventQueueFeature() {
-        notifyEventLoop();
-        while (dequeue(false)) {}
+        drain();
         vQueueDelete(_eventQueue);
     }
 };
