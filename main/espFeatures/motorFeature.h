@@ -169,18 +169,35 @@ public:
                 throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is already moving");
             }
 
+            std::optional<jac::Promise> pms;
+
             if (args.size() == 0) {
                 motor.motor->moveInfinite();
+
+                auto [ promise, resolve, reject ] = jac::Promise::create(ctx);
+                motor.pendingPromise = PromiseFunctions{resolve, reject};
+                pms = promise;
             }
             else {
                 jac::Object duration = args[0].to<jac::Object>();
 
-                if (duration.hasProperty("distance")) {
+                bool hasDistance = duration.hasProperty("distance");
+                bool hasTime = duration.hasProperty("time");
+
+                if (hasDistance && hasTime) {
+                    throw jac::Exception::create(jac::Exception::Type::TypeError, "Cannot specify both distance and time");
+                }
+
+                auto [ promise, resolve, reject ] = jac::Promise::create(ctx);
+                motor.pendingPromise = PromiseFunctions{resolve, reject};
+                pms = promise;
+
+                if (hasDistance) {
                     double distance = duration.get("distance").to<double>();
                     int64_t ticks = motor.encTicks * distance / (motor.circumference);
                     motor.motor->moveDistance(ticks);
                 }
-                else if (duration.hasProperty("time")) {
+                else if (hasTime) {
                     int64_t time = duration.get("time").to<int64_t>();
                     motor.motor->moveTime(time);
                 }
@@ -189,10 +206,7 @@ public:
                 }
             }
 
-            auto [ promise, resolve, reject ] = jac::Promise::create(ctx);
-            motor.pendingPromise = PromiseFunctions{resolve, reject};
-
-            return promise;
+            return pms.value();
         }), jac::PropFlags::Enumerable);
 
         proto.defineProperty("stop", ff.newFunctionThisVariadic([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::vector<jac::ValueWeak> args) {
@@ -262,12 +276,11 @@ public:
 #endif
 
 
-
     MotorFeature() {
         MotorClass::init("Motor");
     }
 
-#if not defined(CONFIG_IDF_TARGET_ESP32C3)
+#if !defined(CONFIG_IDF_TARGET_ESP32C3)
     ~MotorFeature() {
         for(auto& motor : _motors) {
             auto& jsdcMotor = *MotorProtoBuilder<MotorFeature<Next>>::getOpaque(this->context(), motor);
