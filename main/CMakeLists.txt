@@ -1,4 +1,4 @@
-set(JAC_ESP32_VERSION "0.0.12")
+set(JAC_ESP32_VERSION "0.0.13")
 
 idf_component_register(
     SRCS "main.cpp" "platform/espWifi.cpp" "platform/espNvsKeyValue.cpp"
