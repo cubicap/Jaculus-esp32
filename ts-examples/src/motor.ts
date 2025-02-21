@@ -1,7 +1,18 @@
-import { Motor } from "motor";
+import { Motor, RegParams } from "motor";
 import * as ledc from "ledc";
 
-ledc.configureTimer(0, 64000, 10);
+ledc.configureTimer(0, 20000, 10);
+
+let reg: RegParams = {
+    kp: 7000,
+    ki: 350,
+    kd: 350,
+    kv: 166,
+    ka: 11000,
+    kc: 72,
+    maxIOut: 1023,
+    unwindFactor: 1
+};
 
 let left = new Motor({
     pins: {
@@ -15,7 +26,8 @@ let left = new Motor({
         channelA: 0,
         channelB: 1
     },
-    encTicks: 406,  // ticks per revolution
+    reg,
+    encTicks: 812,  // ticks per revolution
     circumference: 34 * Math.PI  // mm
 });
 
@@ -31,7 +43,8 @@ let right = new Motor({
         channelA: 2,
         channelB: 3
     },
-    encTicks: 406,  // ticks per revolution
+    reg,
+    encTicks: 812,  // ticks per revolution
     circumference: 34 * Math.PI  // mm
 });
 
@@ -40,8 +53,10 @@ setInterval(() => {
 }, 1000);
 
 
-left.setSpeed(100);  // 100 mm/s
-right.setSpeed(100);
+left.setSpeed(200);  // 200 mm/s
+right.setSpeed(200);
+left.setRamp(1600);  // 1600 mm/s^2
+right.setRamp(1600);
 
 async function moveDistance() {
     let l = left.move({ distance: 200 });  // 200 mm
@@ -80,4 +95,4 @@ async function main() {
     await moveInfinite();
     console.log("Infinite done");
 }
-main();
+main().catch(console.error);

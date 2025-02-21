@@ -3,9 +3,11 @@
 #include <jac/machine/class.h>
 #include <jac/machine/machine.h>
 #include <jac/machine/values.h>
+#include <jac/features/types/streams.h>
 
 #include <dcmotor.h>
 
+#include <format>
 #include <vector>
 #include <optional>
 
@@ -39,10 +41,10 @@ struct jac::ConvTraits<MotorPins<Feature>> {
     static MotorPins<Feature> from(ContextRef ctx, ValueWeak val) {
         auto obj = val.to<jac::ObjectWeak>();
         MotorPins<Feature> conf;
-        conf.motA = Feature::getDigitalPin(obj.get("motA").to<int>());
-        conf.motB = Feature::getDigitalPin(obj.get("motB").to<int>());
-        conf.encA = Feature::getDigitalPin(obj.get("encA").to<int>());
-        conf.encB = Feature::getDigitalPin(obj.get("encB").to<int>());
+        conf.motA = Feature::getDigitalPin(obj.get<int>("motA"));  // TODO: use direct conversion
+        conf.motB = Feature::getDigitalPin(obj.get<int>("motB"));
+        conf.encA = Feature::getDigitalPin(obj.get<int>("encA"));
+        conf.encB = Feature::getDigitalPin(obj.get<int>("encB"));
         return conf;
     }
 };
@@ -60,9 +62,9 @@ struct jac::ConvTraits<LedcConfig<Feature>> {
     static LedcConfig<Feature> from(ContextRef ctx, ValueWeak val) {
         auto obj = val.to<jac::ObjectWeak>();
         LedcConfig<Feature> conf;
-        conf.timer = static_cast<ledc_timer_t>(obj.get("timer").to<int>());
-        conf.channelA = static_cast<ledc_channel_t>(obj.get("channelA").to<int>());
-        conf.channelB = static_cast<ledc_channel_t>(obj.get("channelB").to<int>());
+        conf.timer = static_cast<ledc_timer_t>(obj.get<int>("timer"));
+        conf.channelA = static_cast<ledc_channel_t>(obj.get<int>("channelA"));
+        conf.channelB = static_cast<ledc_channel_t>(obj.get<int>("channelB"));
 
         if (conf.timer >= LEDC_TIMER_MAX) {
             throw std::runtime_error("Invalid timer");
@@ -75,6 +77,61 @@ struct jac::ConvTraits<LedcConfig<Feature>> {
     }
 };
 
+template<>
+struct jac::ConvTraits<RegParams> {
+    static Value to(ContextRef ctx, RegParams reg) {
+        auto obj = jac::Object::create(ctx);
+        obj.set("kp", jac::Value::from(ctx, reg.kp));
+        obj.set("ki", jac::Value::from(ctx, reg.ki));
+        obj.set("kd", jac::Value::from(ctx, reg.kd));
+        obj.set("kv", jac::Value::from(ctx, reg.kv));
+        obj.set("ka", jac::Value::from(ctx, reg.ka));
+        obj.set("kc", jac::Value::from(ctx, reg.kc));
+        obj.set("maxIOut", jac::Value::from(ctx, reg.maxIOut));
+        obj.set("unwindFactor", jac::Value::from(ctx, reg.unwindFactor));
+        return obj;
+    }
+
+    static RegParams from(ContextRef ctx, ValueWeak val) {
+        auto obj = val.to<jac::ObjectWeak>();
+        RegParams reg = {
+            .kp = 0,
+            .ki = 0,
+            .kd = 0,
+            .kv = 0,
+            .ka = 0,
+            .kc = 0,
+            .maxIOut = 0,
+            .unwindFactor = 0
+        };
+        if (obj.hasProperty("kp")) {
+            reg.kp = obj.get<int>("kp");
+        }
+        if (obj.hasProperty("ki")) {
+            reg.ki = obj.get<int>("ki");
+        }
+        if (obj.hasProperty("kd")) {
+            reg.kd = obj.get<int>("kd");
+        }
+        if (obj.hasProperty("kv")) {
+            reg.kv = obj.get<int>("kv");
+        }
+        if (obj.hasProperty("ka")) {
+            reg.ka = obj.get<int>("ka");
+        }
+        if (obj.hasProperty("kc")) {
+            reg.kc = obj.get<int>("kc");
+        }
+        if (obj.hasProperty("maxIOut")) {
+            reg.maxIOut = obj.get<int>("maxIOut");
+        }
+        if (obj.hasProperty("unwindFactor")) {
+            reg.unwindFactor = obj.get<int>("unwindFactor");
+        }
+
+        return reg;
+    }
+};
 
 struct PromiseFunctions {
     jac::Function resolve;
@@ -88,12 +145,63 @@ struct JSDCMotor {
     int encTicks;
     double circumference;
 
+    using Report = std::tuple<uint64_t, int64_t, int64_t, int, int, int, int, int, int, int, int>;
+    std::deque<Report> reports;
+    int reportCounter = 0;
+
     template<typename Feature>
-    JSDCMotor(MotorPins<Feature> pins, int regP, LedcConfig<Feature> ledcConf, int encTicks, double circumference):
-        motor(std::in_place, pins.motA, pins.motB, pins.encA, pins.encB, regP, ledcConf.timer, ledcConf.channelA, ledcConf.channelB),
+    JSDCMotor(MotorPins<Feature> pins, LedcConfig<Feature> ledcConf, RegParams reg, int encTicks, double circumference):
+        motor(std::in_place, pins.motA, pins.motB, pins.encA, pins.encB, reg, ledcConf.timer, ledcConf.channelA, ledcConf.channelB),
         encTicks(encTicks), circumference(circumference)
     {
         motor->startTicker();
+    }
+
+    void reportStart(int everyNth) {
+        if (motor->isReporting()) {
+            throw std::runtime_error("Already logging");
+        }
+        if (everyNth <= 0) {
+            throw std::runtime_error("Invalid argument");
+        }
+
+        reportCounter = 1;
+        motor->setReporter([this, everyNth](uint64_t time, int64_t pos, int64_t targetPos, int speed, int error, int power, int pout, int iout, int dout, int vout, int aout) {
+            if (reportCounter < 0 || (--reportCounter) != 0) {
+                return;
+            }
+            reportCounter = everyNth;
+            try {
+                reports.emplace_back(time, pos, targetPos, speed, error, power, pout, iout, dout, vout, aout);
+            }
+            catch (...) {
+                reports.clear();
+                this->reportStop();
+                reportCounter = -1;
+            }
+        });
+    }
+
+    void reportStop() {
+        motor->setReporter(nullptr);
+    }
+
+    void reportClear() {
+        reports.clear();
+    }
+
+    void reportDump(jac::Writable& out) {
+        if (reportCounter < 0) {
+            throw std::runtime_error("Report failed (out of memory)");
+        }
+
+        out.write("time,pos,targetPos,speed,error,power,pout,iout,dout,vout,aout\n");
+        for (const auto& report : reports) {
+            auto row = std::format("{},{},{},{},{},{},{},{},{},{},{}\n",
+                std::get<0>(report), std::get<1>(report), std::get<2>(report), std::get<3>(report), std::get<4>(report),
+                std::get<5>(report), std::get<6>(report), std::get<7>(report), std::get<8>(report), std::get<9>(report), std::get<10>(report));
+            out.write(row);
+        }
     }
 
     ~JSDCMotor() {
@@ -119,14 +227,15 @@ public:
         }
 
         auto options = args[0].to<jac::Object>();
-        auto pins = options.get("pins").to<MotorPins<Feature>>();
-        auto encTicks = options.get("encTicks").to<int>();
-        auto circumference = options.get("circumference").to<double>();
+        auto pins = options.get<MotorPins<Feature>>("pins");
+        auto encTicks = options.get<int>("encTicks");
+        auto circumference = options.get<double>("circumference");
 
-        auto ledcConf = options.get("ledc").to<LedcConfig<Feature>>();
+        auto ledcConf = options.get<LedcConfig<Feature>>("ledc");
+        auto reg = options.get<RegParams>("reg");
 
         auto machine = reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
-        std::unique_ptr<JSDCMotor> mot = std::make_unique<JSDCMotor>(pins, 50, ledcConf, encTicks, circumference);
+        std::unique_ptr<JSDCMotor> mot = std::make_unique<JSDCMotor>(pins, ledcConf, reg, encTicks, circumference);
         mot->motor->onTarget([mot = mot.get(), machine]() {
             static constexpr auto resolve = +[](void* data) {
                 JSDCMotor* mot = reinterpret_cast<JSDCMotor*>(data);
@@ -172,11 +281,11 @@ public:
             std::optional<jac::Promise> pms;
 
             if (args.size() == 0) {
-                motor.motor->moveInfinite();
-
                 auto [ promise, resolve, reject ] = jac::Promise::create(ctx);
                 motor.pendingPromise = PromiseFunctions{resolve, reject};
                 pms = promise;
+
+                motor.motor->moveInfinite();
             }
             else {
                 jac::Object duration = args[0].to<jac::Object>();
@@ -193,12 +302,12 @@ public:
                 pms = promise;
 
                 if (hasDistance) {
-                    double distance = duration.get("distance").to<double>();
+                    double distance = duration.get<double>("distance");
                     int64_t ticks = motor.encTicks * distance / (motor.circumference);
                     motor.motor->moveDistance(ticks);
                 }
                 else if (hasTime) {
-                    int64_t time = duration.get("time").to<int64_t>();
+                    int64_t time = duration.get<int64_t>("time");
                     motor.motor->moveTime(time);
                 }
                 else {
@@ -207,6 +316,71 @@ public:
             }
 
             return pms.value();
+        }), jac::PropFlags::Enumerable);
+
+        proto.defineProperty("setRamp", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int ramp) {
+            auto& motor = *getOpaque(ctx, thisVal);
+            if (!motor.motor) {
+                throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
+            }
+
+            motor.motor->setRamp(ramp);
+        }), jac::PropFlags::Enumerable);
+
+        proto.defineProperty("setEndPosTolerance", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, unsigned tolerance) {
+            auto& motor = *getOpaque(ctx, thisVal);
+            if (!motor.motor) {
+                throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
+            }
+
+            motor.motor->setEndPosTolerance(tolerance);
+        }), jac::PropFlags::Enumerable);
+
+        proto.defineProperty("reportStart", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, unsigned everyNth) {
+            auto& motor = *getOpaque(ctx, thisVal);
+            if (!motor.motor) {
+                throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
+            }
+
+            motor.reportStart(everyNth);
+        }), jac::PropFlags::Enumerable);
+
+        proto.defineProperty("reportStop", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
+            auto& motor = *getOpaque(ctx, thisVal);
+            if (!motor.motor) {
+                throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
+            }
+
+            motor.reportStop();
+        }), jac::PropFlags::Enumerable);
+
+        proto.defineProperty("reportClear", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
+            auto& motor = *getOpaque(ctx, thisVal);
+            if (!motor.motor) {
+                throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
+            }
+
+            motor.reportClear();
+        }), jac::PropFlags::Enumerable);
+
+        proto.defineProperty("reportDump", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal) {
+            auto& motor = *getOpaque(ctx, thisVal);
+            if (!motor.motor) {
+                throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
+            }
+
+            Feature& machine = *reinterpret_cast<Feature*>(JS_GetContextOpaque(ctx));
+
+            motor.reportDump(*(machine.stdio.out));
+        }), jac::PropFlags::Enumerable);
+
+        proto.defineProperty("setRaw", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int power) {
+            auto& motor = *getOpaque(ctx, thisVal);
+            if (!motor.motor) {
+                throw jac::Exception::create(jac::Exception::Type::InternalError, "Motor is closed");
+            }
+
+            motor.motor->setRawPower(power);
         }), jac::PropFlags::Enumerable);
 
         proto.defineProperty("stop", ff.newFunctionThisVariadic([](jac::ContextRef ctx, jac::ValueWeak thisVal, std::vector<jac::ValueWeak> args) {
