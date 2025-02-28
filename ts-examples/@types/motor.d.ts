@@ -64,6 +64,13 @@ declare module "motor" {
         move(duration?: MoveDuration): Promise<void>;
 
         /**
+         * Set raw power to the motor
+         * @param pwm Power in the range -1023 to 1023
+         * @note This switches the motor to unregulated mode
+         */
+        setRaw(power: number): void;
+
+        /**
          * Stop the motor
          * @param brake If true, the motor will brake, otherwise it will coast to a stop
          */
