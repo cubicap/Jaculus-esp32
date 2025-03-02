@@ -1,4 +1,7 @@
 declare module "i2c" {
+
+    type I2CData = ArrayBuffer | Uint8Array | number[] | string | number;
+
     interface I2C {
         /**
          * Find an I2C interface by its pin.
@@ -20,7 +23,16 @@ declare module "i2c" {
          * @param address The address to write to.
          * @param buffer The data to write.
          */
-        writeTo(address: number, buffer: ArrayBuffer | Uint8Array | number[] | string | number): void;
+        writeTo(address: number, buffer: I2CData): void;
+
+        /**
+         * Perform a write and read transaction.
+         * @param address The address to write to.
+         * @param buffer The data to write.
+         * @param quantity The number of bytes to read.
+         * @returns The bytes read.
+         */
+        writeRead(address: number, buffer: I2CData, quantity: number): Uint8Array;
 
         /**
          * Setup the I2C interface.

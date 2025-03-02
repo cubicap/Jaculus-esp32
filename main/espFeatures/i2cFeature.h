@@ -42,6 +42,17 @@ public:
         }
     }
 
+    std::vector<uint8_t> writeRead(uint8_t address, std::vector<uint8_t> data, size_t quantity) {
+        std::vector<uint8_t> res(quantity);
+        esp_err_t err = i2c_master_write_read_device(port, address, data.data(), data.size(), res.data(), quantity, 100 / portTICK_PERIOD_MS);
+
+        if (err != ESP_OK) {
+            throw std::runtime_error(esp_err_to_name(err));
+        }
+
+        return res;
+    }
+
     void setup(std::optional<int> scl, std::optional<int> sda, std::optional<int> bitrate) {
         if (open) {
             throw std::runtime_error("I2C already open");
@@ -86,20 +97,17 @@ struct I2CProtoBuilder : public jac::ProtoBuilder::Opaque<I2C<typename I2CFeatur
     static void addProperties(JSContext* ctx, jac::Object proto) {
         jac::FunctionFactory ff(ctx);
 
-        // TODO: ugly hack
-        proto.defineProperty("readFrom", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int address, int quantity) {
-            auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
-            auto data = i2c.readFrom(address, quantity);
-
+        // XXX: ugly hack
+        static auto toUint8Array = [](jac::ContextRef ctx, std::vector<uint8_t> data) -> jac::Value {
             auto res = jac::ArrayBuffer::create(ctx, std::span(data.data(), data.size()));
 
             auto& machine = *reinterpret_cast<I2CFeature*>(JS_GetContextOpaque(ctx));
             jac::Value convertor = machine.eval("(buf) => new Uint8Array(buf)", "<I2CFeature::readFrom>");
-            return convertor.to<jac::Function>().call<jac::Value>(res);
-        }));
 
-        proto.defineProperty("writeTo", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int address, jac::Value data) {
-            auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
+            return convertor.to<jac::Function>().call<jac::Value>(res);
+        };
+
+        static auto toStdVector = [](jac::ContextRef ctx, jac::Value data) -> std::vector<uint8_t> {
             std::vector<uint8_t> dataVec;
 
             if (JS_IsString(data.getVal())) {
@@ -126,7 +134,29 @@ R"--(
                 std::copy(dataView.begin(), dataView.end(), dataVec.begin());
             }
 
+            return dataVec;
+        };
+
+        proto.defineProperty("readFrom", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int address, int quantity) {
+            auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
+            auto data = i2c.readFrom(address, quantity);
+
+            return toUint8Array(ctx, data);
+        }));
+
+        proto.defineProperty("writeTo", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int address, jac::Value data) {
+            auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
+            auto dataVec = toStdVector(ctx, data);
+
             i2c.writeTo(address, std::move(dataVec));
+        }));
+
+        proto.defineProperty("writeRead", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, int address, jac::Value data, int quantity) {
+            auto& i2c = *I2CProtoBuilder::getOpaque(ctx, thisVal);
+            auto dataVec = toStdVector(ctx, data);
+            auto res = i2c.writeRead(address, std::move(dataVec), quantity);
+
+            return toUint8Array(ctx, res);
         }));
 
         proto.defineProperty("setup", ff.newFunctionThis([](jac::ContextRef ctx, jac::ValueWeak thisVal, jac::Object options) {
