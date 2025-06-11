@@ -5,7 +5,7 @@ idf_component_register(
         "espFeatures/gridui/gridUiFeature.cpp" "espFeatures/gridui/widgets/_common.cpp"
     INCLUDE_DIRS ""
     REQUIRES jac-dcore jac-machine jac-link
-             driver pthread spiffs vfs fatfs
+             driver pthread spiffs vfs fatfs esp_http_client
              SmartLeds esp_timer Esp32-RBGridUI
 )
 

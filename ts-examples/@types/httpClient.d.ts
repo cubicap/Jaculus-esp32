@@ -25,7 +25,9 @@ declare module "httpClient" {
      * @param options Optional request options (e.g., headers, timeout).
      * @returns A promise that resolves with the HTTP response or rejects with an error.
      */
-    function get(url: string, options?: HttpRequestOptions): Promise<HttpResponse>;
+    // function get(url: string, options?: HttpRequestOptions): Promise<HttpResponse>;
+
+    function get(url: string): string;
 
     /**
      * Performs an HTTP POST request.
@@ -79,4 +81,7 @@ declare module "httpClient" {
      * @returns A promise that resolves with the HTTP response or rejects with an error.
      */
     function request(method: HttpMethod, url: string, body?: string | object, options?: HttpRequestOptions): Promise<HttpResponse>;
+
+
+    function read(pin: number): number;
 }
