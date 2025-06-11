@@ -1,5 +1,6 @@
 import * as httpClient from 'httpClient';
 import { stdout } from 'stdio'; // For logging
+import { waitForIp, currentIp } from 'wifi'; // For logging
 
 /**
  * Example demonstrating the httpClient module.
@@ -11,6 +12,10 @@ import { stdout } from 'stdio'; // For logging
 const TEST_API_URL = "https://jsonplaceholder.typicode.com"; // A public test API
 
 async function runHttpExamples() {
+    console.error("Waiting for IP address before exiting...");
+    waitForIp();
+    console.error("Connected IP:" + currentIp());
+
     stdout.write("Running httpClient examples...\n");
 
     while (true) {
@@ -20,6 +25,7 @@ async function runHttpExamples() {
             stdout.write(`Waiting for response... (${i + 1}/10)\n`);
             await sleep(100);
         }
+
         const response = await response_hdl;
 
         console.log("Status:" + response.status);

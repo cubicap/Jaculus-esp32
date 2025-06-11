@@ -24,5 +24,19 @@ public:
                 return jac::Value::from(this->context(), wifi.currentIpStr());
             }
         })));
+
+        module.addExport("waitForIp", ff.newFunctionVariadic([this](std::vector<jac::ValueWeak> args) {
+            if (args.size() > 1) {
+                throw std::runtime_error("Invalid number of arguments for waitForIp method");
+            }
+
+            uint32_t timeoutMs = 0; // Default: wait forever
+            if (args.size() == 1) {
+                timeoutMs = args[0].to<uint32_t>();
+            }
+
+            auto& wifi = EspWifiController::get();
+            return jac::Value::from(this->context(), wifi.waitForIp(timeoutMs));
+        }));
     }
 };

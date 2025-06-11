@@ -2,6 +2,8 @@
 
 #include "esp_wifi.h"
 #include "esp_netif.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "espWifi.h"
 
 EspWifiController::EspWifiController() :
@@ -411,4 +413,25 @@ void EspWifiController::eventHandlerIp(void* selfVoid, esp_event_base_t event_ba
     char buf[16];
     esp_ip4addr_ntoa(&event->ip_info.ip, buf, sizeof(buf));
     jac::Logger::debug("SYSTEM_EVENT_STA_GOT_IP: " + std::string(buf));
+}
+
+bool EspWifiController::waitForIp(uint32_t timeoutMs) {
+    const uint32_t pollIntervalMs = 100;
+    uint32_t elapsedMs = 0;
+
+    while (true) {
+        // Check if we have an IP address
+        if (_currentIp.addr != 0) {
+            return true;
+        }
+
+        // Check timeout
+        if (timeoutMs > 0 && elapsedMs >= timeoutMs) {
+            return false;
+        }
+
+        // Wait for poll interval
+        vTaskDelay(pdMS_TO_TICKS(pollIntervalMs));
+        elapsedMs += pollIntervalMs;
+    }
 }

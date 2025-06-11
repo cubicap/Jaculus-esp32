@@ -88,5 +88,12 @@ public:
         return buf;
     }
 
+    /**
+     * @brief Wait for WiFi to get an IP address
+     * @param timeoutMs Maximum time to wait in milliseconds (0 = wait forever)
+     * @return true if IP was obtained, false if timeout occurred
+     */
+    bool waitForIp(uint32_t timeoutMs = 0);
+
     Mode mode() const { return _mode; }
 };

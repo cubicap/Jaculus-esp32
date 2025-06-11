@@ -10,6 +10,8 @@
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "../platform/espWifi.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 
 template<class Next>
@@ -34,11 +36,92 @@ class HttpClientFeature : public Next {
                 }
             }
 
+            // Copy constructor
+            HttpResponse(const HttpResponse& other) : data(nullptr), size(other.size), status_code(other.status_code), success(other.success) {
+                if (other.data && other.size > 0) {
+                    data = (char*)malloc(other.size + 1);
+                    if (data) {
+                        memcpy(data, other.data, other.size);
+                        data[other.size] = '\0';
+                    }
+                } else {
+                    data = (char*)malloc(1);
+                    if (data) {
+                        data[0] = '\0';
+                    }
+                }
+            }
+
+            // Move constructor
+            HttpResponse(HttpResponse&& other) noexcept : data(other.data), size(other.size), status_code(other.status_code), success(other.success) {
+                other.data = nullptr;
+                other.size = 0;
+            }
+
+            // Copy assignment operator
+            HttpResponse& operator=(const HttpResponse& other) {
+                if (this != &other) {
+                    if (data) {
+                        free(data);
+                    }
+                    size = other.size;
+                    status_code = other.status_code;
+                    success = other.success;
+                    
+                    if (other.data && other.size > 0) {
+                        data = (char*)malloc(other.size + 1);
+                        if (data) {
+                            memcpy(data, other.data, other.size);
+                            data[other.size] = '\0';
+                        }
+                    } else {
+                        data = (char*)malloc(1);
+                        if (data) {
+                            data[0] = '\0';
+                        }
+                    }
+                }
+                return *this;
+            }
+
+            // Move assignment operator
+            HttpResponse& operator=(HttpResponse&& other) noexcept {
+                if (this != &other) {
+                    if (data) {
+                        free(data);
+                    }
+                    data = other.data;
+                    size = other.size;
+                    status_code = other.status_code;
+                    success = other.success;
+                    
+                    other.data = nullptr;
+                    other.size = 0;
+                }
+                return *this;
+            }
+
             ~HttpResponse() {
                 if (data) {
                     free(data);
                 }
             }
+        };
+
+        struct HttpTaskData {
+            std::string url;
+            std::string method;
+            std::string data;
+            std::string contentType;
+            jac::Function resolve;
+            jac::Function reject;
+            jac::ContextRef ctx;
+            HttpClientFeature* feature;
+
+            HttpTaskData(std::string url, std::string method, std::string data, std::string contentType,
+                        jac::Function resolve, jac::Function reject, jac::ContextRef ctx, HttpClientFeature* feature)
+                : url(std::move(url)), method(std::move(method)), data(std::move(data)), contentType(std::move(contentType)),
+                  resolve(std::move(resolve)), reject(std::move(reject)), ctx(ctx), feature(feature) {}
         };
 
         static esp_err_t httpEventHandler(esp_http_client_event_t *evt) {
@@ -69,84 +152,118 @@ class HttpClientFeature : public Next {
             return ESP_OK;
         }
 
+        static void httpRequestTask(void* pvParameters) {
+            HttpTaskData* taskData = static_cast<HttpTaskData*>(pvParameters);
+            
+            // Double-check WiFi connectivity inside the task
+            auto& wifi = EspWifiController::get();
+            if (wifi.currentIp().addr == 0) {
+                taskData->feature->scheduleEvent([taskData]() {
+                    auto error = jac::Exception::create(jac::Exception::Type::Error, "WiFi connection lost during request");
+                    taskData->reject.template call<void>(error);
+                    delete taskData;
+                });
+                vTaskDelete(NULL);
+                return;
+            }
+            
+            HttpResponse* response = new HttpResponse();
+
+            esp_http_client_config_t config = {};
+            config.url = taskData->url.c_str();
+            config.event_handler = httpEventHandler;
+            config.user_data = response;
+            config.timeout_ms = 5000;
+
+            esp_http_client_handle_t client = esp_http_client_init(&config);
+            if (!client) {
+                taskData->feature->scheduleEvent([taskData, response]() {
+                    auto error = jac::Exception::create(jac::Exception::Type::Error, "Failed to initialize HTTP client");
+                    taskData->reject.template call<void>(error);
+                    delete response; // Clean up response
+                    delete taskData;
+                });
+                vTaskDelete(NULL);
+                return;
+            }
+
+            // Set HTTP method
+            if (taskData->method == "POST") {
+                esp_http_client_set_method(client, HTTP_METHOD_POST);
+                if (!taskData->data.empty()) {
+                    esp_http_client_set_header(client, "Content-Type", taskData->contentType.c_str());
+                    esp_http_client_set_post_field(client, taskData->data.c_str(), taskData->data.length());
+                }
+            } else if (taskData->method == "PUT") {
+                esp_http_client_set_method(client, HTTP_METHOD_PUT);
+                if (!taskData->data.empty()) {
+                    esp_http_client_set_header(client, "Content-Type", taskData->contentType.c_str());
+                    esp_http_client_set_post_field(client, taskData->data.c_str(), taskData->data.length());
+                }
+            } else if (taskData->method == "DELETE") {
+                esp_http_client_set_method(client, HTTP_METHOD_DELETE);
+            } else {
+                // Default to GET
+                esp_http_client_set_method(client, HTTP_METHOD_GET);
+            }
+
+            esp_err_t err = esp_http_client_perform(client);
+            esp_http_client_cleanup(client);
+
+            // Schedule the response callback on the main thread
+            taskData->feature->scheduleEvent([taskData, response, err]() mutable {
+                if (err != ESP_OK) {
+                    auto error = jac::Exception::create(jac::Exception::Type::Error, "HTTP request failed");
+                    taskData->reject.template call<void>(error);
+                } else {
+                    jac::Object result = jac::Object::create(taskData->ctx);
+                    result.set("status", response->status_code);
+                    
+                    if (!response->data) {
+                        result.set("body", ""); // No response data
+                    } else {
+                        result.set("body", std::string(response->data));
+                    }
+                    
+                    taskData->resolve.template call<void>(result);
+                }
+                delete response; // Clean up heap-allocated response
+                delete taskData;
+            });
+
+            vTaskDelete(NULL);
+        }
+
     public:
         HttpClient() : _ctx(nullptr), _feature(nullptr) {}
         HttpClient(jac::ContextRef ctx, HttpClientFeature* feature) : _ctx(ctx), _feature(feature) {}
 
         jac::Value request(std::string url, std::string method = "GET", std::string data = "", std::string contentType = "application/json") {
-            auto [promise, resolve, reject] = jac::Promise::create(_ctx);
-
-            // Check if WiFi is connected
+            // Check if WiFi is connected - throw exception if no IP
             auto& wifi = EspWifiController::get();
             if (wifi.currentIp().addr == 0) {
-                jac::Object result = jac::Object::create(_ctx);
-                result.set("status", -1);
-                result.set("body", "\\ERR:1"); // No IP address - WiFi not connected
-                reject.call<void>(result);
-                return promise;
+                throw jac::Exception::create(jac::Exception::Type::Error, "No IP address - WiFi not connected");
             }
 
-            // Schedule the HTTP request to run asynchronously
-            _feature->scheduleEvent([url, method, data, contentType, resolve_ = resolve, reject_ = reject, ctx = _ctx]() mutable {
-                HttpResponse response;
+            auto [promise, resolve, reject] = jac::Promise::create(_ctx);
 
-                esp_http_client_config_t config = {};
-                config.url = url.c_str();
-                config.event_handler = httpEventHandler;
-                config.user_data = &response;
-                config.timeout_ms = 5000;
+            // Create task data with all the request information
+            HttpTaskData* taskData = new HttpTaskData(url, method, data, contentType, resolve, reject, _ctx, _feature);
 
-                esp_http_client_handle_t client = esp_http_client_init(&config);
-                if (!client) {
-                    jac::Object result = jac::Object::create(ctx);
-                    result.set("status", -2);
-                    result.set("body", "\\ERR:2"); // Failed to initialize HTTP client
-                    reject_.call<void>(result);
-                    return;
-                }
+            // Create a FreeRTOS task to handle the HTTP request asynchronously
+            BaseType_t result = xTaskCreate(
+                httpRequestTask,     // Task function
+                "http_request",      // Task name
+                8192,                // Stack size (8KB)
+                taskData,            // Parameters passed to task
+                5,                   // Priority
+                nullptr              // Task handle (we don't need it)
+            );
 
-                // Set HTTP method
-                if (method == "POST") {
-                    esp_http_client_set_method(client, HTTP_METHOD_POST);
-                    if (!data.empty()) {
-                        esp_http_client_set_header(client, "Content-Type", contentType.c_str());
-                        esp_http_client_set_post_field(client, data.c_str(), data.length());
-                    }
-                } else if (method == "PUT") {
-                    esp_http_client_set_method(client, HTTP_METHOD_PUT);
-                    if (!data.empty()) {
-                        esp_http_client_set_header(client, "Content-Type", contentType.c_str());
-                        esp_http_client_set_post_field(client, data.c_str(), data.length());
-                    }
-                } else if (method == "DELETE") {
-                    esp_http_client_set_method(client, HTTP_METHOD_DELETE);
-                } else {
-                    // Default to GET
-                    esp_http_client_set_method(client, HTTP_METHOD_GET);
-                }
-
-                esp_err_t err = esp_http_client_perform(client);
-                esp_http_client_cleanup(client);
-
-                if (err != ESP_OK) {
-                    jac::Object result = jac::Object::create(ctx);
-                    result.set("status", -3);
-                    result.set("body", "\\ERR:3"); // HTTP request failed
-                    reject_.call<void>(result);
-                    return;
-                }
-
-                jac::Object result = jac::Object::create(ctx);
-                result.set("status", response.status_code);
-
-                if (!response.data) {
-                    result.set("body", ""); // No response data
-                } else {
-                    result.set("body", std::string(response.data));
-                }
-
-                resolve_.call<void>(result);
-            });
+            if (result != pdPASS) {
+                delete taskData;
+                throw jac::Exception::create(jac::Exception::Type::Error, "Failed to create HTTP request task");
+            }
 
             return promise;
         }
