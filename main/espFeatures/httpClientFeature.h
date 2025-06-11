@@ -19,6 +19,7 @@ class HttpClientFeature : public Next {
     private:
         static const char* TAG;
         jac::ContextRef _ctx;
+        HttpClientFeature* _feature;
 
         struct HttpResponse {
             char* data;
@@ -69,90 +70,100 @@ class HttpClientFeature : public Next {
         }
 
     public:
-        HttpClient() : _ctx(nullptr) {}
-        HttpClient(jac::ContextRef ctx) : _ctx(ctx) {}
+        HttpClient() : _ctx(nullptr), _feature(nullptr) {}
+        HttpClient(jac::ContextRef ctx, HttpClientFeature* feature) : _ctx(ctx), _feature(feature) {}
 
-        jac::Object request(std::string url, std::string method = "GET", std::string data = "", std::string contentType = "application/json") {
+        jac::Value request(std::string url, std::string method = "GET", std::string data = "", std::string contentType = "application/json") {
+            auto [promise, resolve, reject] = jac::Promise::create(_ctx);
+
             // Check if WiFi is connected
             auto& wifi = EspWifiController::get();
             if (wifi.currentIp().addr == 0) {
                 jac::Object result = jac::Object::create(_ctx);
                 result.set("status", -1);
                 result.set("body", "\\ERR:1"); // No IP address - WiFi not connected
-                return result;
+                reject.call<void>(result);
+                return promise;
             }
 
-            HttpResponse response;
+            // Schedule the HTTP request to run asynchronously
+            _feature->scheduleEvent([url, method, data, contentType, resolve_ = resolve, reject_ = reject, ctx = _ctx]() mutable {
+                HttpResponse response;
 
-            esp_http_client_config_t config = {};
-            config.url = url.c_str();
-            config.event_handler = httpEventHandler;
-            config.user_data = &response;
-            config.timeout_ms = 5000;
+                esp_http_client_config_t config = {};
+                config.url = url.c_str();
+                config.event_handler = httpEventHandler;
+                config.user_data = &response;
+                config.timeout_ms = 5000;
 
-            esp_http_client_handle_t client = esp_http_client_init(&config);
-            if (!client) {
-                jac::Object result = jac::Object::create(_ctx);
-                result.set("status", -2);
-                result.set("body", "\\ERR:2"); // Failed to initialize HTTP client
-                return result;
-            }
-
-            // Set HTTP method
-            if (method == "POST") {
-                esp_http_client_set_method(client, HTTP_METHOD_POST);
-                if (!data.empty()) {
-                    esp_http_client_set_header(client, "Content-Type", contentType.c_str());
-                    esp_http_client_set_post_field(client, data.c_str(), data.length());
+                esp_http_client_handle_t client = esp_http_client_init(&config);
+                if (!client) {
+                    jac::Object result = jac::Object::create(ctx);
+                    result.set("status", -2);
+                    result.set("body", "\\ERR:2"); // Failed to initialize HTTP client
+                    reject_.call<void>(result);
+                    return;
                 }
-            } else if (method == "PUT") {
-                esp_http_client_set_method(client, HTTP_METHOD_PUT);
-                if (!data.empty()) {
-                    esp_http_client_set_header(client, "Content-Type", contentType.c_str());
-                    esp_http_client_set_post_field(client, data.c_str(), data.length());
+
+                // Set HTTP method
+                if (method == "POST") {
+                    esp_http_client_set_method(client, HTTP_METHOD_POST);
+                    if (!data.empty()) {
+                        esp_http_client_set_header(client, "Content-Type", contentType.c_str());
+                        esp_http_client_set_post_field(client, data.c_str(), data.length());
+                    }
+                } else if (method == "PUT") {
+                    esp_http_client_set_method(client, HTTP_METHOD_PUT);
+                    if (!data.empty()) {
+                        esp_http_client_set_header(client, "Content-Type", contentType.c_str());
+                        esp_http_client_set_post_field(client, data.c_str(), data.length());
+                    }
+                } else if (method == "DELETE") {
+                    esp_http_client_set_method(client, HTTP_METHOD_DELETE);
+                } else {
+                    // Default to GET
+                    esp_http_client_set_method(client, HTTP_METHOD_GET);
                 }
-            } else if (method == "DELETE") {
-                esp_http_client_set_method(client, HTTP_METHOD_DELETE);
-            } else {
-                // Default to GET
-                esp_http_client_set_method(client, HTTP_METHOD_GET);
-            }
 
-            esp_err_t err = esp_http_client_perform(client);
-            esp_http_client_cleanup(client);
+                esp_err_t err = esp_http_client_perform(client);
+                esp_http_client_cleanup(client);
 
-            if (err != ESP_OK) {
-                jac::Object result = jac::Object::create(_ctx);
-                result.set("status", -3);
-                result.set("body", "\\ERR:3"); // HTTP request failed
-                return result;
-            }
+                if (err != ESP_OK) {
+                    jac::Object result = jac::Object::create(ctx);
+                    result.set("status", -3);
+                    result.set("body", "\\ERR:3"); // HTTP request failed
+                    reject_.call<void>(result);
+                    return;
+                }
 
-            jac::Object result = jac::Object::create(_ctx);
-            result.set("status", response.status_code);
+                jac::Object result = jac::Object::create(ctx);
+                result.set("status", response.status_code);
 
-            if (!response.data) {
-                result.set("body", ""); // No response data
-            } else {
-                result.set("body", std::string(response.data));
-            }
+                if (!response.data) {
+                    result.set("body", ""); // No response data
+                } else {
+                    result.set("body", std::string(response.data));
+                }
 
-            return result;
+                resolve_.call<void>(result);
+            });
+
+            return promise;
         }
 
-        jac::Object get(std::string url) {
+        jac::Value get(std::string url) {
             return request(url, "GET");
         }
 
-        jac::Object post(std::string url, std::string data = "", std::string contentType = "application/json") {
+        jac::Value post(std::string url, std::string data = "", std::string contentType = "application/json") {
             return request(url, "POST", data, contentType);
         }
 
-        jac::Object put(std::string url, std::string data = "", std::string contentType = "application/json") {
+        jac::Value put(std::string url, std::string data = "", std::string contentType = "application/json") {
             return request(url, "PUT", data, contentType);
         }
 
-        jac::Object del(std::string url) {
+        jac::Value del(std::string url) {
             return request(url, "DELETE");
         }
     };
@@ -164,7 +175,7 @@ public:
         Next::initialize();
 
         // Initialize the HttpClient with the context
-        http = HttpClient(this->context());
+        http = HttpClient(this->context(), this);
 
         jac::FunctionFactory ff(this->context());
         jac::Module& httpClientModule = this->newModule("httpClient");

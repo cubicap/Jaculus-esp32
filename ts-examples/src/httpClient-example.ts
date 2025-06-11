@@ -14,7 +14,14 @@ async function runHttpExamples() {
     stdout.write("Running httpClient examples...\n");
 
     while (true) {
-        const response = httpClient.post("http://httpbin.org/post");
+        const response_hdl = httpClient.get("http://httpbin.org/get");
+
+        for (let i = 0; i < 10; i++) {
+            stdout.write(`Waiting for response... (${i + 1}/10)\n`);
+            await sleep(100);
+        }
+        const response = await response_hdl;
+
         console.log("Status:" + response.status);
         console.log("Body:" + response.body);
 
