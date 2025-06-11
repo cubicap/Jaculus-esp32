@@ -14,7 +14,7 @@ async function runHttpExamples() {
     stdout.write("Running httpClient examples...\n");
 
     while (true) {
-        const response = httpClient.get("http://httpbin.org/get");
+        const response = httpClient.post("http://httpbin.org/post");
         console.log("Status:" + response.status);
         console.log("Body:" + response.body);
 

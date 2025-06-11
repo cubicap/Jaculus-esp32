@@ -72,7 +72,7 @@ class HttpClientFeature : public Next {
         HttpClient() : _ctx(nullptr) {}
         HttpClient(jac::ContextRef ctx) : _ctx(ctx) {}
 
-        jac::Object get(std::string url) {
+        jac::Object request(std::string url, std::string method = "GET", std::string data = "", std::string contentType = "application/json") {
             // Check if WiFi is connected
             auto& wifi = EspWifiController::get();
             if (wifi.currentIp().addr == 0) {
@@ -98,6 +98,26 @@ class HttpClientFeature : public Next {
                 return result;
             }
 
+            // Set HTTP method
+            if (method == "POST") {
+                esp_http_client_set_method(client, HTTP_METHOD_POST);
+                if (!data.empty()) {
+                    esp_http_client_set_header(client, "Content-Type", contentType.c_str());
+                    esp_http_client_set_post_field(client, data.c_str(), data.length());
+                }
+            } else if (method == "PUT") {
+                esp_http_client_set_method(client, HTTP_METHOD_PUT);
+                if (!data.empty()) {
+                    esp_http_client_set_header(client, "Content-Type", contentType.c_str());
+                    esp_http_client_set_post_field(client, data.c_str(), data.length());
+                }
+            } else if (method == "DELETE") {
+                esp_http_client_set_method(client, HTTP_METHOD_DELETE);
+            } else {
+                // Default to GET
+                esp_http_client_set_method(client, HTTP_METHOD_GET);
+            }
+
             esp_err_t err = esp_http_client_perform(client);
             esp_http_client_cleanup(client);
 
@@ -119,6 +139,22 @@ class HttpClientFeature : public Next {
 
             return result;
         }
+
+        jac::Object get(std::string url) {
+            return request(url, "GET");
+        }
+
+        jac::Object post(std::string url, std::string data = "", std::string contentType = "application/json") {
+            return request(url, "POST", data, contentType);
+        }
+
+        jac::Object put(std::string url, std::string data = "", std::string contentType = "application/json") {
+            return request(url, "PUT", data, contentType);
+        }
+
+        jac::Object del(std::string url) {
+            return request(url, "DELETE");
+        }
     };
 
 public:
@@ -134,6 +170,33 @@ public:
         jac::Module& httpClientModule = this->newModule("httpClient");
 
         httpClientModule.addExport("get", ff.newFunction(noal::function(&HttpClient::get, &http)));
+
+        // Use variadic functions to handle optional parameters
+        httpClientModule.addExport("post", ff.newFunctionVariadic([this](std::vector<jac::ValueWeak> args) {
+            if (args.size() < 1 || args.size() > 3) {
+                throw std::runtime_error("Invalid number of arguments for post method");
+            }
+
+            std::string url = args[0].to<std::string>();
+            std::string data = (args.size() > 1) ? args[1].to<std::string>() : "";
+            std::string contentType = (args.size() > 2) ? args[2].to<std::string>() : "application/json";
+
+            return http.post(url, data, contentType);
+        }));
+
+        httpClientModule.addExport("put", ff.newFunctionVariadic([this](std::vector<jac::ValueWeak> args) {
+            if (args.size() < 1 || args.size() > 3) {
+                throw std::runtime_error("Invalid number of arguments for put method");
+            }
+
+            std::string url = args[0].to<std::string>();
+            std::string data = (args.size() > 1) ? args[1].to<std::string>() : "";
+            std::string contentType = (args.size() > 2) ? args[2].to<std::string>() : "application/json";
+
+            return http.put(url, data, contentType);
+        }));
+
+        httpClientModule.addExport("delete", ff.newFunction(noal::function(&HttpClient::del, &http)));
     }
 };
 
