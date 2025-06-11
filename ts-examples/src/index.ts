@@ -1,5 +1,5 @@
 /**
  * Select the example by changing the import path.
  */
-import "./httpClient-example.js";
+import "./httpClientDemo.js";
 // import "./blink.js";

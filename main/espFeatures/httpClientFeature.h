@@ -29,15 +29,15 @@ class HttpClientFeature : public Next {
             int status_code;
             bool success;
 
-            HttpResponse() : data(nullptr), size(0), status_code(0), success(false) {
+        private:
+            void initializeEmptyData() {
                 data = (char*)malloc(1);
                 if (data) {
                     data[0] = '\0';
                 }
             }
 
-            // Copy constructor
-            HttpResponse(const HttpResponse& other) : data(nullptr), size(other.size), status_code(other.status_code), success(other.success) {
+            void copyDataFrom(const HttpResponse& other) {
                 if (other.data && other.size > 0) {
                     data = (char*)malloc(other.size + 1);
                     if (data) {
@@ -45,56 +45,42 @@ class HttpClientFeature : public Next {
                         data[other.size] = '\0';
                     }
                 } else {
-                    data = (char*)malloc(1);
-                    if (data) {
-                        data[0] = '\0';
-                    }
+                    initializeEmptyData();
                 }
             }
 
-            // Move constructor
+        public:
+            HttpResponse() : data(nullptr), size(0), status_code(0), success(false) {
+                initializeEmptyData();
+            }
+
+            HttpResponse(const HttpResponse& other) : data(nullptr), size(other.size), status_code(other.status_code), success(other.success) {
+                copyDataFrom(other);
+            }
+
             HttpResponse(HttpResponse&& other) noexcept : data(other.data), size(other.size), status_code(other.status_code), success(other.success) {
                 other.data = nullptr;
                 other.size = 0;
             }
 
-            // Copy assignment operator
             HttpResponse& operator=(const HttpResponse& other) {
                 if (this != &other) {
-                    if (data) {
-                        free(data);
-                    }
+                    free(data);
                     size = other.size;
                     status_code = other.status_code;
                     success = other.success;
-                    
-                    if (other.data && other.size > 0) {
-                        data = (char*)malloc(other.size + 1);
-                        if (data) {
-                            memcpy(data, other.data, other.size);
-                            data[other.size] = '\0';
-                        }
-                    } else {
-                        data = (char*)malloc(1);
-                        if (data) {
-                            data[0] = '\0';
-                        }
-                    }
+                    copyDataFrom(other);
                 }
                 return *this;
             }
 
-            // Move assignment operator
             HttpResponse& operator=(HttpResponse&& other) noexcept {
                 if (this != &other) {
-                    if (data) {
-                        free(data);
-                    }
+                    free(data);
                     data = other.data;
                     size = other.size;
                     status_code = other.status_code;
                     success = other.success;
-                    
                     other.data = nullptr;
                     other.size = 0;
                 }
@@ -102,9 +88,7 @@ class HttpClientFeature : public Next {
             }
 
             ~HttpResponse() {
-                if (data) {
-                    free(data);
-                }
+                free(data);
             }
         };
 
@@ -154,7 +138,7 @@ class HttpClientFeature : public Next {
 
         static void httpRequestTask(void* pvParameters) {
             HttpTaskData* taskData = static_cast<HttpTaskData*>(pvParameters);
-            
+
             // Double-check WiFi connectivity inside the task
             auto& wifi = EspWifiController::get();
             if (wifi.currentIp().addr == 0) {
@@ -166,7 +150,7 @@ class HttpClientFeature : public Next {
                 vTaskDelete(NULL);
                 return;
             }
-            
+
             HttpResponse* response = new HttpResponse();
 
             esp_http_client_config_t config = {};
@@ -187,24 +171,21 @@ class HttpClientFeature : public Next {
                 return;
             }
 
-            // Set HTTP method
+            // Configure HTTP method and data
             if (taskData->method == "POST") {
                 esp_http_client_set_method(client, HTTP_METHOD_POST);
-                if (!taskData->data.empty()) {
-                    esp_http_client_set_header(client, "Content-Type", taskData->contentType.c_str());
-                    esp_http_client_set_post_field(client, taskData->data.c_str(), taskData->data.length());
-                }
             } else if (taskData->method == "PUT") {
                 esp_http_client_set_method(client, HTTP_METHOD_PUT);
-                if (!taskData->data.empty()) {
-                    esp_http_client_set_header(client, "Content-Type", taskData->contentType.c_str());
-                    esp_http_client_set_post_field(client, taskData->data.c_str(), taskData->data.length());
-                }
             } else if (taskData->method == "DELETE") {
                 esp_http_client_set_method(client, HTTP_METHOD_DELETE);
             } else {
-                // Default to GET
                 esp_http_client_set_method(client, HTTP_METHOD_GET);
+            }
+
+            // Set data for POST/PUT methods
+            if ((taskData->method == "POST" || taskData->method == "PUT") && !taskData->data.empty()) {
+                esp_http_client_set_header(client, "Content-Type", taskData->contentType.c_str());
+                esp_http_client_set_post_field(client, taskData->data.c_str(), taskData->data.length());
             }
 
             esp_err_t err = esp_http_client_perform(client);
@@ -218,16 +199,10 @@ class HttpClientFeature : public Next {
                 } else {
                     jac::Object result = jac::Object::create(taskData->ctx);
                     result.set("status", response->status_code);
-                    
-                    if (!response->data) {
-                        result.set("body", ""); // No response data
-                    } else {
-                        result.set("body", std::string(response->data));
-                    }
-                    
+                    result.set("body", response->data ? std::string(response->data) : "");
                     taskData->resolve.template call<void>(result);
                 }
-                delete response; // Clean up heap-allocated response
+                delete response;
                 delete taskData;
             });
 
@@ -288,43 +263,35 @@ class HttpClientFeature : public Next {
 public:
     HttpClient http;
 
+private:
+    // Helper function to create variadic HTTP method functions
+    auto createHttpMethodFunction(const std::string& method) {
+        return [this, method](std::vector<jac::ValueWeak> args) {
+            if (args.size() < 1 || args.size() > 3) {
+                throw std::runtime_error("Invalid number of arguments for " + method + " method");
+            }
+
+            std::string url = args[0].to<std::string>();
+            std::string data = (args.size() > 1) ? args[1].to<std::string>() : "";
+            std::string contentType = (args.size() > 2) ? args[2].to<std::string>() : "application/json";
+
+            return http.request(url, method, data, contentType);
+        };
+    }
+
+public:
     void initialize() {
         Next::initialize();
 
-        // Initialize the HttpClient with the context
         http = HttpClient(this->context(), this);
 
         jac::FunctionFactory ff(this->context());
         jac::Module& httpClientModule = this->newModule("httpClient");
 
         httpClientModule.addExport("get", ff.newFunction(noal::function(&HttpClient::get, &http)));
-
-        // Use variadic functions to handle optional parameters
-        httpClientModule.addExport("post", ff.newFunctionVariadic([this](std::vector<jac::ValueWeak> args) {
-            if (args.size() < 1 || args.size() > 3) {
-                throw std::runtime_error("Invalid number of arguments for post method");
-            }
-
-            std::string url = args[0].to<std::string>();
-            std::string data = (args.size() > 1) ? args[1].to<std::string>() : "";
-            std::string contentType = (args.size() > 2) ? args[2].to<std::string>() : "application/json";
-
-            return http.post(url, data, contentType);
-        }));
-
-        httpClientModule.addExport("put", ff.newFunctionVariadic([this](std::vector<jac::ValueWeak> args) {
-            if (args.size() < 1 || args.size() > 3) {
-                throw std::runtime_error("Invalid number of arguments for put method");
-            }
-
-            std::string url = args[0].to<std::string>();
-            std::string data = (args.size() > 1) ? args[1].to<std::string>() : "";
-            std::string contentType = (args.size() > 2) ? args[2].to<std::string>() : "application/json";
-
-            return http.put(url, data, contentType);
-        }));
-
-        httpClientModule.addExport("delete", ff.newFunction(noal::function(&HttpClient::del, &http)));
+        httpClientModule.addExport("post", ff.newFunctionVariadic(createHttpMethodFunction("POST")));
+        httpClientModule.addExport("put", ff.newFunctionVariadic(createHttpMethodFunction("PUT")));
+        httpClientModule.addExport("del", ff.newFunction(noal::function(&HttpClient::del, &http)));
     }
 };
 

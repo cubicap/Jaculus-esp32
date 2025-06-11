@@ -1,88 +1,46 @@
 declare module "httpClient" {
-    type HttpMethod =
-        | "GET"
-        | "POST"
-        | "PUT"
-        | "DELETE"
-        | "PATCH"
-        | "HEAD"
-        | "OPTIONS";
-
-    interface HttpRequestOptions {
-        headers?: Record<string, string>;
-        timeout?: number; // Timeout in milliseconds
-    }
-
+    /**
+     * HTTP Response object returned by all HTTP methods
+     */
     interface HttpResponse {
-        status: number;
-        body: string;
-        // headers: Record<string, string>;
+        status: number;  // HTTP status code (200, 404, etc.)
+        body: string;    // Response body as string
     }
 
     /**
      * Performs an HTTP GET request.
      * @param url The URL to request.
-     * @param options Optional request options (e.g., headers, timeout).
      * @returns A promise that resolves with the HTTP response or rejects with an error.
+     * @throws Exception if no IP address (WiFi not connected) or task creation fails.
      */
     function get(url: string): Promise<HttpResponse>;
-
-    // function get(url: string): HttpResponse;
 
     /**
      * Performs an HTTP POST request.
      * @param url The URL to request.
-     * @param body The body of the request (string or object to be JSON stringified).
-     * @param options Optional request options (e.g., headers, timeout).
+     * @param data Optional request body data (default: "").
+     * @param contentType Optional content type header (default: "application/json").
      * @returns A promise that resolves with the HTTP response or rejects with an error.
+     * @throws Exception if no IP address (WiFi not connected) or task creation fails.
      */
-    // function post(url: string, body: string | object, options?: HttpRequestOptions): Promise<HttpResponse>;
-    function post(url: string, body?: string, type?: string): HttpResponse;
+    function post(url: string, data?: string, contentType?: string): Promise<HttpResponse>;
 
     /**
      * Performs an HTTP PUT request.
      * @param url The URL to request.
-     * @param body The body of the request (string or object to be JSON stringified).
-     * @param options Optional request options.
+     * @param data Optional request body data (default: "").
+     * @param contentType Optional content type header (default: "application/json").
      * @returns A promise that resolves with the HTTP response or rejects with an error.
+     * @throws Exception if no IP address (WiFi not connected) or task creation fails.
      */
-    function put(url: string, body: string | object, options?: HttpRequestOptions): Promise<HttpResponse>;
+    function put(url: string, data?: string, contentType?: string): Promise<HttpResponse>;
 
     /**
      * Performs an HTTP DELETE request.
      * @param url The URL to request.
-     * @param options Optional request options.
      * @returns A promise that resolves with the HTTP response or rejects with an error.
+     * @throws Exception if no IP address (WiFi not connected) or task creation fails.
+     * @note 'delete' is a TypeScript keyword, so the function is named 'del'.
      */
-    function del(url: string, options?: HttpRequestOptions): Promise<HttpResponse>; // 'delete' is a keyword
-
-    /**
-     * Performs an HTTP PATCH request.
-     * @param url The URL to request.
-     * @param body The body of the request (string or object to be JSON stringified).
-     * @param options Optional request options.
-     * @returns A promise that resolves with the HTTP response or rejects with an error.
-     */
-    function patch(url: string, body: string | object, options?: HttpRequestOptions): Promise<HttpResponse>;
-
-    /**
-     * Performs an HTTP HEAD request.
-     * @param url The URL to request.
-     * @param options Optional request options.
-     * @returns A promise that resolves with the HTTP response (typically no body) or rejects with an error.
-     */
-    function head(url: string, options?: HttpRequestOptions): Promise<HttpResponse>;
-
-    /**
-     * Performs a generic HTTP request.
-     * @param method The HTTP method (GET, POST, etc.).
-     * @param url The URL to request.
-     * @param body The body of the request (string or object for methods that support it).
-     * @param options Optional request options.
-     * @returns A promise that resolves with the HTTP response or rejects with an error.
-     */
-    function request(method: HttpMethod, url: string, body?: string | object, options?: HttpRequestOptions): Promise<HttpResponse>;
-
-
-    function read(pin: number): number;
+    function del(url: string): Promise<HttpResponse>;
 }
