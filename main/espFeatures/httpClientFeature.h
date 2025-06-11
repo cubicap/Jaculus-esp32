@@ -2,6 +2,7 @@
 
 #include <jac/machine/machine.h>
 #include <jac/machine/functionFactory.h>
+#include <jac/machine/values.h>
 
 #include <stdexcept>
 #include <set>
@@ -17,6 +18,7 @@ class HttpClientFeature : public Next {
     class HttpClient {
     private:
         static const char* TAG;
+        jac::ContextRef _ctx;
 
         struct HttpResponse {
             char* data;
@@ -67,11 +69,17 @@ class HttpClientFeature : public Next {
         }
 
     public:
-        std::string get(std::string url) {
+        HttpClient() : _ctx(nullptr) {}
+        HttpClient(jac::ContextRef ctx) : _ctx(ctx) {}
+
+        jac::Object get(std::string url) {
             // Check if WiFi is connected
             auto& wifi = EspWifiController::get();
             if (wifi.currentIp().addr == 0) {
-                return "\\ERR:1"; // No IP address - WiFi not connected
+                jac::Object result = jac::Object::create(_ctx);
+                result.set("status", -1);
+                result.set("body", "\\ERR:1"); // No IP address - WiFi not connected
+                return result;
             }
 
             HttpResponse response;
@@ -84,25 +92,32 @@ class HttpClientFeature : public Next {
 
             esp_http_client_handle_t client = esp_http_client_init(&config);
             if (!client) {
-                return "\\ERR:2"; // Failed to initialize HTTP client
+                jac::Object result = jac::Object::create(_ctx);
+                result.set("status", -2);
+                result.set("body", "\\ERR:2"); // Failed to initialize HTTP client
+                return result;
             }
 
             esp_err_t err = esp_http_client_perform(client);
             esp_http_client_cleanup(client);
 
             if (err != ESP_OK) {
-                return "\\ERR:3"; // HTTP request failed
+                jac::Object result = jac::Object::create(_ctx);
+                result.set("status", -3);
+                result.set("body", "\\ERR:3"); // HTTP request failed
+                return result;
             }
 
-            if (!response.success || response.status_code != 200) {
-                return "\\ERR:" + std::to_string(response.status_code); // HTTP error status
-            }
+            jac::Object result = jac::Object::create(_ctx);
+            result.set("status", response.status_code);
 
             if (!response.data) {
-                return "\\ERR:4"; // No response data
+                result.set("body", ""); // No response data
+            } else {
+                result.set("body", std::string(response.data));
             }
 
-            return std::string(response.data);
+            return result;
         }
     };
 
@@ -111,6 +126,9 @@ public:
 
     void initialize() {
         Next::initialize();
+
+        // Initialize the HttpClient with the context
+        http = HttpClient(this->context());
 
         jac::FunctionFactory ff(this->context());
         jac::Module& httpClientModule = this->newModule("httpClient");

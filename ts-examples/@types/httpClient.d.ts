@@ -16,7 +16,7 @@ declare module "httpClient" {
     interface HttpResponse {
         status: number;
         body: string;
-        headers: Record<string, string>;
+        // headers: Record<string, string>;
     }
 
     /**
@@ -27,7 +27,7 @@ declare module "httpClient" {
      */
     // function get(url: string, options?: HttpRequestOptions): Promise<HttpResponse>;
 
-    function get(url: string): string;
+    function get(url: string): HttpResponse;
 
     /**
      * Performs an HTTP POST request.
