@@ -112,89 +112,69 @@ public:
      */
     void start() {
         if (_isInitialized) {
-            BLE_LOG_DEBUG("BLE Stream already initialized");
             return;
         }
 
         BLE_LOG_INFO("Starting BLE Stream initialization...");
         esp_err_t ret;
 
-        // Note: NVS is already initialized in main.cpp, so we skip it here
         // Release Classic BT memory (only if not already released)
         static bool bt_mem_released = false;
         if (!bt_mem_released) {
-            BLE_LOG_DEBUG("Releasing Classic BT memory...");
             ret = esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
             if (ret == ESP_OK) {
                 bt_mem_released = true;
-                BLE_LOG_DEBUG("Classic BT memory released successfully");
             } else {
                 BLE_LOG_ERROR("Failed to release Classic BT memory: " + std::string(esp_err_to_name(ret)));
             }
-        } else {
-            BLE_LOG_DEBUG("Classic BT memory already released");
         }
 
         // Initialize BT controller
-        BLE_LOG_DEBUG("Initializing BT controller...");
         esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
         ret = esp_bt_controller_init(&bt_cfg);
         if (ret) {
             BLE_LOG_ERROR("BLE controller init failed: " + std::string(esp_err_to_name(ret)));
             return;
         }
-        BLE_LOG_DEBUG("BT controller initialized successfully");
 
-        BLE_LOG_DEBUG("Enabling BLE mode...");
         ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
         if (ret) {
             BLE_LOG_ERROR("BLE controller enable failed: " + std::string(esp_err_to_name(ret)));
             return;
         }
-        BLE_LOG_DEBUG("BLE mode enabled successfully");
 
         // Initialize Bluedroid
-        BLE_LOG_DEBUG("Initializing Bluedroid stack...");
         ret = esp_bluedroid_init();
         if (ret) {
             BLE_LOG_ERROR("Bluedroid init failed: " + std::string(esp_err_to_name(ret)));
             return;
         }
-        BLE_LOG_DEBUG("Bluedroid stack initialized successfully");
 
-        BLE_LOG_DEBUG("Enabling Bluedroid stack...");
         ret = esp_bluedroid_enable();
         if (ret) {
             BLE_LOG_ERROR("Bluedroid enable failed: " + std::string(esp_err_to_name(ret)));
             return;
         }
-        BLE_LOG_DEBUG("Bluedroid stack enabled successfully");
 
         // Register callbacks
-        BLE_LOG_DEBUG("Registering GATTS callback...");
         ret = esp_ble_gatts_register_callback(gatts_event_handler);
         if (ret) {
             BLE_LOG_ERROR("GATTS register callback failed: " + std::string(esp_err_to_name(ret)));
             return;
         }
-        BLE_LOG_DEBUG("GATTS callback registered successfully");
 
-        BLE_LOG_DEBUG("Registering GAP callback...");
         ret = esp_ble_gap_register_callback(gap_event_handler);
         if (ret) {
             BLE_LOG_ERROR("GAP register callback failed: " + std::string(esp_err_to_name(ret)));
             return;
         }
-        BLE_LOG_DEBUG("GAP callback registered successfully");
 
         // Register GATT application
-        BLE_LOG_DEBUG("Registering GATT application...");
         ret = esp_ble_gatts_app_register(0);
         if (ret) {
             BLE_LOG_ERROR("GATTS app register failed: " + std::string(esp_err_to_name(ret)));
             return;
         }
-        BLE_LOG_DEBUG("GATT application registration initiated");
 
         // Set MTU
         esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
@@ -333,11 +313,8 @@ private:
 
     // GAP event handler
     static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
-        BLE_LOG_DEBUG("GAP Event: " + std::to_string(event));
-
         switch (event) {
         case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-            BLE_LOG_DEBUG("Advertisement data set complete, starting advertising...");
             esp_ble_gap_start_advertising(&adv_params);
             break;
         case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
@@ -350,12 +327,9 @@ private:
         case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
             if (param->adv_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
                 BLE_LOG_ERROR("Advertising stop failed");
-            } else {
-                BLE_LOG_DEBUG("BLE advertising stopped");
             }
             break;
         default:
-            BLE_LOG_DEBUG("Unhandled GAP event: " + std::to_string(event));
             break;
         }
     }
@@ -364,22 +338,16 @@ private:
     static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if_param, esp_ble_gatts_cb_param_t *param) {
         if (!instance) return;
 
-        BLE_LOG_DEBUG("GATTS Event: " + std::to_string(event));
-
         switch (event) {
         case ESP_GATTS_REG_EVT:
             {
-                BLE_LOG_DEBUG("GATTS register event - Starting BLE service setup");
                 gatts_if = gatts_if_param;
 
                 // Generate device name with MAC address
                 std::string device_name = generateDeviceName();
-                BLE_LOG_DEBUG("Setting device name to: " + device_name);
                 esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name(device_name.c_str());
                 if (set_dev_name_ret) {
                     BLE_LOG_ERROR("Set device name failed: " + std::string(esp_err_to_name(set_dev_name_ret)));
-                } else {
-                    BLE_LOG_DEBUG("Device name set successfully");
                 }
 
                 // Configure advertising data
@@ -399,16 +367,12 @@ private:
                     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
                 };
 
-                BLE_LOG_DEBUG("Configuring advertisement data...");
                 esp_err_t ret = esp_ble_gap_config_adv_data(&adv_data);
                 if (ret) {
                     BLE_LOG_ERROR("Config adv data failed: " + std::string(esp_err_to_name(ret)));
-                } else {
-                    BLE_LOG_DEBUG("Advertisement data configured successfully");
                 }
 
                 // Create service
-                BLE_LOG_DEBUG("Creating GATT service with UUID: 0x" + std::to_string(GATTS_SERVICE_UUID));
                 esp_gatt_srvc_id_t service_id;
                 service_id.is_primary = true;
                 service_id.id.inst_id = 0x00;
@@ -417,27 +381,20 @@ private:
                 esp_err_t create_ret = esp_ble_gatts_create_service(gatts_if, &service_id, GATTS_NUM_HANDLE);
                 if (create_ret) {
                     BLE_LOG_ERROR("Create service failed: " + std::string(esp_err_to_name(create_ret)));
-                } else {
-                    BLE_LOG_DEBUG("Service creation initiated");
                 }
                 break;
             }
 
         case ESP_GATTS_CREATE_EVT:
             {
-                BLE_LOG_DEBUG("Service created with handle: " + std::to_string(param->create.service_handle));
                 service_handle = param->create.service_handle;
 
-                BLE_LOG_DEBUG("Starting service...");
                 esp_err_t start_ret = esp_ble_gatts_start_service(service_handle);
                 if (start_ret) {
                     BLE_LOG_ERROR("Start service failed: " + std::string(esp_err_to_name(start_ret)));
-                } else {
-                    BLE_LOG_DEBUG("Service start initiated");
                 }
 
                 // Add characteristic
-                BLE_LOG_DEBUG("Adding characteristic with UUID: 0x" + std::to_string(GATTS_CHAR_UUID));
                 esp_bt_uuid_t char_uuid = {
                     .len = ESP_UUID_LEN_16,
                     .uuid = {.uuid16 = GATTS_CHAR_UUID}
@@ -452,15 +409,12 @@ private:
                                      char_property, nullptr, nullptr);
                 if (add_char_ret) {
                     BLE_LOG_ERROR("Add characteristic failed: " + std::string(esp_err_to_name(add_char_ret)));
-                } else {
-                    BLE_LOG_DEBUG("Characteristic addition initiated");
                 }
                 break;
             }
 
         case ESP_GATTS_ADD_CHAR_EVT:
             {
-                BLE_LOG_DEBUG("Characteristic added with handle: " + std::to_string(param->add_char.attr_handle));
                 char_handle = param->add_char.attr_handle;
 
                 // Add descriptor for notifications
@@ -469,35 +423,27 @@ private:
                     .uuid = {.uuid16 = GATTS_DESCR_UUID}
                 };
 
-                BLE_LOG_DEBUG("Adding descriptor for notifications...");
                 esp_err_t add_descr_ret = esp_ble_gatts_add_char_descr(service_handle, &descr_uuid,
                                            ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
                                            nullptr, nullptr);
                 if (add_descr_ret) {
                     BLE_LOG_ERROR("Add descriptor failed: " + std::string(esp_err_to_name(add_descr_ret)));
-                } else {
-                    BLE_LOG_DEBUG("Descriptor addition initiated");
                 }
                 break;
             }
 
         case ESP_GATTS_ADD_CHAR_DESCR_EVT:
             {
-                BLE_LOG_DEBUG("Descriptor added with handle: " + std::to_string(param->add_char_descr.attr_handle));
                 descr_handle = param->add_char_descr.attr_handle;
                 // Now that everything is set up, start advertising
-                BLE_LOG_DEBUG("All services set up, starting BLE advertising...");
                 esp_err_t adv_start_ret = esp_ble_gap_start_advertising(&adv_params);
                 if (adv_start_ret) {
                     BLE_LOG_ERROR("Failed to start advertising: " + std::string(esp_err_to_name(adv_start_ret)));
-                } else {
-                    BLE_LOG_DEBUG("Advertising start command sent successfully");
                 }
                 break;
             }
 
         case ESP_GATTS_START_EVT:
-            BLE_LOG_DEBUG("Service started");
             break;
 
         case ESP_GATTS_CONNECT_EVT:
@@ -533,12 +479,10 @@ private:
                         BLE_LOG_INFO("BLE notifications enabled");
                         instance->_notifyEnabled = true;
                     } else {
-                        BLE_LOG_DEBUG("BLE notifications disabled");
                         instance->_notifyEnabled = false;
                     }
                 } else if (param->write.handle == char_handle) {
                     // Data written to characteristic
-                    BLE_LOG_DEBUG("Received " + std::to_string(param->write.len) + " bytes via BLE");
                     instance->addReceivedData(param->write.value, param->write.len);
                 }
 
@@ -551,8 +495,6 @@ private:
 
         case ESP_GATTS_READ_EVT:
             {
-                BLE_LOG_DEBUG("Read request for handle: " + std::to_string(param->read.handle));
-
                 // Respond to read requests with empty data
                 esp_gatt_rsp_t rsp = {};
                 rsp.attr_value.handle = param->read.handle;
@@ -569,14 +511,8 @@ private:
 
         // Handle other events without error
         case ESP_GATTS_EXEC_WRITE_EVT:
-            BLE_LOG_DEBUG("GATTS Execute Write Event");
-            break;
         case ESP_GATTS_MTU_EVT:
-            BLE_LOG_DEBUG("MTU updated to: " + std::to_string(param->mtu.mtu));
-            break;
         case ESP_GATTS_CONF_EVT:
-            // Confirmation received for notification/indication
-            break;
         case ESP_GATTS_UNREG_EVT:
         case ESP_GATTS_ADD_INCL_SRVC_EVT:
         case ESP_GATTS_DELETE_EVT:
