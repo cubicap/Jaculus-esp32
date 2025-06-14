@@ -4,12 +4,12 @@
 #include <jac/device/logger.h>
 
 #include <atomic>
+#include <array>
 #include <cstdint>
 #include <deque>
 #include <functional>
 #include <span>
 #include <string>
-#include <thread>
 #include <mutex>
 
 #include "freertos/FreeRTOS.h"
@@ -20,12 +20,8 @@
 #include "esp_gatts_api.h"
 #include "esp_bt_defs.h"
 #include "esp_gatt_common_api.h"
-#include "nvs_flash.h"
-#include "esp_gap_ble_api.h"
-#include "esp_gatts_api.h"
-#include "esp_bt_defs.h"
-#include "esp_bt_main.h"
-#include "esp_gatt_common_api.h"
+#include "esp_system.h"
+#include "esp_mac.h"
 
 // BLE Debug Logging Control
 // Uncomment the next line to enable detailed BLE logging for debugging
@@ -41,50 +37,79 @@
     #define BLE_LOG_INFO(msg) ((void)0)                 // Disable info messages when debugging is off
 #endif
 
+/**
+ * @brief BLE Stream implementation for ESP32
+ *
+ * Provides a BLE GATT server that can be used as a duplex stream for communication.
+ * Integrates with the Jaculus-esp32 project as an additional transport method.
+ */
+
 
 class BleStream : public jac::Duplex {
+private:
+    // Member variables
     std::function<void()> _onData;
     std::deque<uint8_t> _buffer;
     std::mutex _bufferMutex;
-    std::atomic<bool> _isConnected = false;
-    std::atomic<bool> _notifyEnabled = false;
-    std::atomic<bool> _isInitialized = false;
+    std::atomic<bool> _isConnected{false};
+    std::atomic<bool> _notifyEnabled{false};
+    std::atomic<bool> _isInitialized{false};
 
-    // BLE configuration
+    // BLE configuration constants
     static constexpr uint16_t GATTS_SERVICE_UUID = 0x00FF;
     static constexpr uint16_t GATTS_CHAR_UUID = 0xFF01;
     static constexpr uint16_t GATTS_DESCR_UUID = 0x2902; // Client Characteristic Configuration
     static constexpr uint16_t GATTS_NUM_HANDLE = 4;
-    static constexpr const char* DEVICE_NAME = "ESP32_JAC_BLE";
+    static constexpr const char* DEVICE_NAME_PREFIX = "ESP32_JAC_BLE";
+    static constexpr size_t MAX_CHUNK_SIZE = 500; // Conservative MTU size
 
-    // BLE handles
+    // BLE handles - shared across all instances
     static inline esp_gatt_if_t gatts_if = ESP_GATT_IF_NONE;
     static inline uint16_t service_handle = 0;
     static inline uint16_t char_handle = 0;
     static inline uint16_t descr_handle = 0;
     static inline uint16_t conn_id = 0;
 
-    // Global instance pointer for callbacks
+    // Global instance pointer for callbacks (singleton pattern)
     static inline BleStream* instance = nullptr;
 
-    // BLE advertising data
+    // BLE advertising configuration
     static esp_ble_adv_data_t adv_data;
     static esp_ble_adv_params_t adv_params;
 
 public:
-    BleStream(const std::string& deviceName = "BLE_STREAM") {
+    /**
+     * @brief Constructor
+     * @param deviceName Device name for BLE advertising (currently unused, uses DEVICE_NAME constant)
+     * @throws std::runtime_error if another instance already exists (singleton pattern)
+     */
+    explicit BleStream(const std::string& deviceName = "BLE_STREAM") {
         if (instance != nullptr) {
             throw std::runtime_error("Only one BleStream instance is allowed");
         }
         instance = this;
-        // Note: deviceName could be used to customize the device name if needed
     }
 
-    BleStream(BleStream&&) = delete;
+    // Disable copy and move operations
     BleStream(const BleStream&) = delete;
-    BleStream& operator=(BleStream&&) = delete;
+    BleStream(BleStream&&) = delete;
     BleStream& operator=(const BleStream&) = delete;
+    BleStream& operator=(BleStream&&) = delete;
 
+    /**
+     * @brief Destructor - cleans up BLE resources
+     */
+    ~BleStream() override {
+        cleanup();
+        if (instance == this) {
+            instance = nullptr;
+        }
+    }
+
+    /**
+     * @brief Initialize and start the BLE stack
+     * @note This method is idempotent - calling it multiple times is safe
+     */
     void start() {
         if (_isInitialized) {
             BLE_LOG_DEBUG("BLE Stream already initialized");
@@ -181,21 +206,20 @@ public:
         BLE_LOG_INFO("BLE Stream initialized successfully");
     }
 
+    // Duplex interface implementation
     bool put(uint8_t c) override {
-        return write(std::span<const uint8_t>(&c, 1)) == 1;
+        std::array<uint8_t, 1> arr{c};
+        return write(std::span<const uint8_t>(arr)) == 1;
     }
 
     size_t write(std::span<const uint8_t> data) override {
         if (!_isConnected || !_notifyEnabled) {
-            return data.size(); // Pretend write succeeded
+            return data.size(); // Pretend write succeeded when not connected
         }
 
-        // BLE has MTU limitations, so we may need to split large data
         size_t written = 0;
-        const size_t maxChunkSize = 500; // Conservative MTU size
-
         while (written < data.size()) {
-            size_t chunkSize = std::min(maxChunkSize, data.size() - written);
+            size_t chunkSize = std::min(MAX_CHUNK_SIZE, data.size() - written);
 
             esp_err_t ret = esp_ble_gatts_send_indicate(
                 gatts_if,
@@ -248,20 +272,39 @@ public:
         _onData = callback;
     }
 
-    ~BleStream() override {
+private:
+    /**
+     * @brief Clean up BLE resources
+     */
+    void cleanup() {
         if (_isInitialized) {
             esp_bluedroid_disable();
             esp_bluedroid_deinit();
             esp_bt_controller_disable();
             esp_bt_controller_deinit();
-        }
-        if (instance == this) {
-            instance = nullptr;
+            _isInitialized = false;
         }
     }
 
-private:
-    // Add received data to buffer and trigger callback
+    /**
+     * @brief Initialize the BT controller
+     * @return true on success, false on failure
+     */
+    bool initBtController();
+
+    /**
+     * @brief Initialize the Bluedroid stack
+     * @return true on success, false on failure
+     */
+    bool initBluedroid();
+
+    /**
+     * @brief Register BLE callbacks
+     * @return true on success, false on failure
+     */
+    bool registerCallbacks();
+
+    // Private method implementations
     void addReceivedData(const uint8_t* data, size_t len) {
         {
             std::lock_guard<std::mutex> lock(_bufferMutex);
@@ -271,6 +314,21 @@ private:
         if (_onData) {
             _onData();
         }
+    }
+
+    static std::string generateDeviceName() {
+        uint8_t mac[6];
+        esp_err_t ret = esp_read_mac(mac, ESP_MAC_WIFI_STA);
+        if (ret != ESP_OK) {
+            BLE_LOG_ERROR("Failed to read MAC address: " + std::string(esp_err_to_name(ret)));
+            return std::string(DEVICE_NAME_PREFIX);
+        }
+
+        // Use last 2 bytes of MAC address for uniqueness
+        char name_buffer[32];
+        snprintf(name_buffer, sizeof(name_buffer), "%s_%02X%02X",
+                DEVICE_NAME_PREFIX, mac[4], mac[5]);
+        return std::string(name_buffer);
     }
 
     // GAP event handler
@@ -314,8 +372,10 @@ private:
                 BLE_LOG_DEBUG("GATTS register event - Starting BLE service setup");
                 gatts_if = gatts_if_param;
 
-                BLE_LOG_DEBUG("Setting device name to: " + std::string(DEVICE_NAME));
-                esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name(DEVICE_NAME);
+                // Generate device name with MAC address
+                std::string device_name = generateDeviceName();
+                BLE_LOG_DEBUG("Setting device name to: " + device_name);
+                esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name(device_name.c_str());
                 if (set_dev_name_ret) {
                     BLE_LOG_ERROR("Set device name failed: " + std::string(esp_err_to_name(set_dev_name_ret)));
                 } else {
