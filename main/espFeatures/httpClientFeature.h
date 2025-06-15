@@ -108,6 +108,14 @@ class HttpClientFeature : public Next {
                   resolve(std::move(resolve)), reject(std::move(reject)), ctx(ctx), feature(feature) {}
         };
 
+        // Helper function to create JavaScript Error objects
+        static jac::Object createErrorObject(jac::ContextRef ctx, const std::string& message) {
+            jac::Object errorObj = jac::Object::create(ctx);
+            errorObj.set("name", "Error");
+            errorObj.set("message", message);
+            return errorObj;
+        }
+
         static esp_err_t httpEventHandler(esp_http_client_event_t *evt) {
             HttpResponse* response = (HttpResponse*)evt->user_data;
 
@@ -143,8 +151,8 @@ class HttpClientFeature : public Next {
             auto& wifi = EspWifiController::get();
             if (wifi.currentIp().addr == 0) {
                 taskData->feature->scheduleEvent([taskData]() {
-                    auto error = jac::Exception::create(jac::Exception::Type::Error, "WiFi connection lost during request");
-                    taskData->reject.template call<void>(error);
+                    auto errorObj = createErrorObject(taskData->ctx, "WiFi connection lost during request");
+                    taskData->reject.template call<void>(errorObj);
                     delete taskData;
                 });
                 vTaskDelete(NULL);
@@ -162,8 +170,8 @@ class HttpClientFeature : public Next {
             esp_http_client_handle_t client = esp_http_client_init(&config);
             if (!client) {
                 taskData->feature->scheduleEvent([taskData, response]() {
-                    auto error = jac::Exception::create(jac::Exception::Type::Error, "Failed to initialize HTTP client");
-                    taskData->reject.template call<void>(error);
+                    auto errorObj = createErrorObject(taskData->ctx, "Failed to initialize HTTP client");
+                    taskData->reject.template call<void>(errorObj);
                     delete response; // Clean up response
                     delete taskData;
                 });
@@ -172,15 +180,15 @@ class HttpClientFeature : public Next {
             }
 
             // Configure HTTP method and data
+            esp_http_client_method_t httpMethod = HTTP_METHOD_GET;
             if (taskData->method == "POST") {
-                esp_http_client_set_method(client, HTTP_METHOD_POST);
+                httpMethod = HTTP_METHOD_POST;
             } else if (taskData->method == "PUT") {
-                esp_http_client_set_method(client, HTTP_METHOD_PUT);
+                httpMethod = HTTP_METHOD_PUT;
             } else if (taskData->method == "DELETE") {
-                esp_http_client_set_method(client, HTTP_METHOD_DELETE);
-            } else {
-                esp_http_client_set_method(client, HTTP_METHOD_GET);
+                httpMethod = HTTP_METHOD_DELETE;
             }
+            esp_http_client_set_method(client, httpMethod);
 
             // Set data for POST/PUT methods
             if ((taskData->method == "POST" || taskData->method == "PUT") && !taskData->data.empty()) {
@@ -194,8 +202,8 @@ class HttpClientFeature : public Next {
             // Schedule the response callback on the main thread
             taskData->feature->scheduleEvent([taskData, response, err]() mutable {
                 if (err != ESP_OK) {
-                    auto error = jac::Exception::create(jac::Exception::Type::Error, "HTTP request failed");
-                    taskData->reject.template call<void>(error);
+                    auto errorObj = createErrorObject(taskData->ctx, "HTTP request failed");
+                    taskData->reject.template call<void>(errorObj);
                 } else {
                     jac::Object result = jac::Object::create(taskData->ctx);
                     result.set("status", response->status_code);

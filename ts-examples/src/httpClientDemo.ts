@@ -154,7 +154,7 @@ async function runHttpExamples() {
     stdout.write("The HTTP client is working correctly!\n");
 
     // Optional: Run a continuous test loop (uncomment to enable)
-    // await runContinuousTest();
+    await runContinuousTest();
 }
 
 /**
@@ -176,7 +176,7 @@ async function runContinuousTest() {
             stdout.write(`Error: ${error.message}\n`);
         }
 
-        await sleep(5000); // 5 second intervals
+        await sleep(500); // 5 second intervals
     }
 }
 
