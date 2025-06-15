@@ -81,7 +81,7 @@ void BleStream::start() {
     }
 
     // Set MTU
-    esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
+    esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(MAX_CHUNK_SIZE);
     if (local_mtu_ret) {
         BLE_LOG_ERROR("Set local MTU failed: " + std::string(esp_err_to_name(local_mtu_ret)));
     }

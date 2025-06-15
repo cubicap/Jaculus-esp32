@@ -25,10 +25,8 @@
 #include "esp_mac.h"
 
 // BLE Debug Logging Control
-// Uncomment the next line to enable detailed BLE logging for debugging
-// #define BLE_STREAM_DEBUG_LOGS
-
-#ifdef BLE_STREAM_DEBUG_LOGS
+// Can be controlled via Kconfig (menuconfig) or by defining BLE_STREAM_DEBUG_LOGS
+#if defined(CONFIG_JAC_ESP32_BLE_DEBUG_LOGS) || defined(BLE_STREAM_DEBUG_LOGS)
     #define BLE_LOG_DEBUG(msg) jac::Logger::debug(msg)
     #define BLE_LOG_ERROR(msg) jac::Logger::error(msg)
     #define BLE_LOG_INFO(msg) jac::Logger::debug(msg)   // Use debug for info when enabled
@@ -55,12 +53,12 @@ private:
     std::atomic<bool> _isInitialized{false};
 
     // BLE configuration constants
-    static constexpr uint16_t GATTS_SERVICE_UUID = 0x00FF;
-    static constexpr uint16_t GATTS_CHAR_UUID = 0xFF01;
+    static constexpr uint16_t GATTS_SERVICE_UUID = CONFIG_JAC_ESP32_BLE_SERVICE_UUID;
+    static constexpr uint16_t GATTS_CHAR_UUID = CONFIG_JAC_ESP32_BLE_CHARACTERISTIC_UUID;
     static constexpr uint16_t GATTS_DESCR_UUID = 0x2902; // Client Characteristic Configuration
     static constexpr uint16_t GATTS_NUM_HANDLE = 4;
-    static constexpr const char* DEVICE_NAME_PREFIX = "ESP32_JAC_BLE";
-    static constexpr size_t MAX_CHUNK_SIZE = 500; // Conservative MTU size
+    static constexpr const char* DEVICE_NAME_PREFIX = CONFIG_JAC_ESP32_BLE_DEVICE_NAME;
+    static constexpr size_t MAX_CHUNK_SIZE = CONFIG_JAC_ESP32_BLE_MTU_SIZE; // Configurable MTU size
 
     // BLE handles - shared across all instances
     static inline esp_gatt_if_t gatts_if = ESP_GATT_IF_NONE;

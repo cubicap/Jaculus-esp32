@@ -34,7 +34,9 @@
 
 #include "util/uartStream.h"
 #include "util/tcpStream.h"
+#ifdef CONFIG_JAC_ESP32_ENABLE_BLE
 #include "util/bleStream.h"
+#endif
 
 #include "resources/resources.h"
 
@@ -125,7 +127,9 @@ jac::Device<Machine> device(
 using Mux_t = jac::Mux<jac::CobsEncoder>;
 std::unique_ptr<Mux_t> muxUart;
 std::unique_ptr<Mux_t> muxTcp;
+#ifdef CONFIG_JAC_ESP32_ENABLE_BLE
 std::unique_ptr<Mux_t> muxBle;
+#endif
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3)
     std::unique_ptr<Mux_t> muxJtag;
@@ -216,6 +220,7 @@ int main() {
         muxTcp->bindRx(std::make_unique<decltype(handleTcp)>(std::move(handleTcp)));
     }
 
+#ifdef CONFIG_JAC_ESP32_ENABLE_BLE
     // initialize BLE stream
     auto bleStream = std::make_unique<BleStream>("ESP32_JAC_BLE");
     bleStream->start();
@@ -224,6 +229,7 @@ int main() {
     muxBle->setErrorHandler(reportMuxError);
     auto handleBle = device.router().subscribeTx(4, *muxBle);
     muxBle->bindRx(std::make_unique<decltype(handleBle)>(std::move(handleBle)));
+#endif
 
 
     device.onConfigureMachine([&](Machine &machine) {
