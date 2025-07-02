@@ -1,15 +1,17 @@
 # get version
 version=$(git describe)
 
+help_text="Usage: $0 <id> <sdkconfig> <sdkconfig> <bootloader_offset>"
+
 # setup environment
 board=$1
 if [ "$board" = "" ]; then
-    echo "Usage: $0 <board> <sdkconfig> <chip> <bootloader_offset>"
+    echo $help_text
     exit 1
 fi
 sdkconfig=$2
 if [ "$sdkconfig" = "" ]; then
-    echo "Usage: $0 <board> <sdkconfig> <chip> <bootloader_offset>"
+    echo $help_text
     exit 1
 fi
 if [ ! -f $sdkconfig ]; then
@@ -18,12 +20,12 @@ if [ ! -f $sdkconfig ]; then
 fi
 chip=$3
 if [ "$chip" = "" ]; then
-    echo "Usage: $0 <board> <sdkconfig> <chip> <bootloader_offset>"
+    echo $help_text
     exit 1
 fi
 bootloader_offset=$4
 if [ "$bootloader_offset" = "" ]; then
-    echo "Usage: $0 <board> <sdkconfig> <chip> <bootloader_offset>"
+    echo $help_text
     exit 1
 fi
 
@@ -35,7 +37,8 @@ tmp=$out/$board
 
 # select sdkconfig
 rm -f sdkconfig
-ln -s $sdkconfig sdkconfig
+rm -f sdkconfig.defaults
+ln -s $sdkconfig sdkconfig.defaults
 
 # clean build
 idf.py fullclean build || exit 1
