@@ -2,14 +2,14 @@ dependencies:
   idf: ">=5.2.2"
   jac-dcore:
     git: https://github.com/cubicap/Jaculus-dcore.git
-    version: v0.0.16
+    version: v0.0.17
     path: src
   simple-radio:
     git: https://github.com/RoboticsBrno/Esp32-simple-radio.git
     version: v1.2.2
   SmartLeds:
     git: https://github.com/RoboticsBrno/SmartLeds.git
-    version: v3.1.2
+    version: v3.1.6
   Esp32-RBGridUI:
     git: https://github.com/RoboticsBrno/Esp32-RBGridUI.git
     version: v5.3.2
