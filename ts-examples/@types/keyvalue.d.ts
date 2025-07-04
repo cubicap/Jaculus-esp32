@@ -44,6 +44,12 @@ declare module "keyvalue" {
         exists(key: string): boolean;
 
         /**
+         * List all keys in the namespace.
+         * @returns array of keys
+         */
+        keys(): string[];
+
+        /**
          * Save modifications to persistent storage.
          */
         commit(): void;

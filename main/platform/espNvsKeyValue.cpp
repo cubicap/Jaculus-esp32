@@ -94,30 +94,41 @@ std::string EspNvsKeyValue::getString(const std::string& name, std::string def_v
     return result;
 }
 
-jac::KeyValueNamespace::DataType EspNvsKeyValue::getType(const std::string& name) {
-    DataType typ = DataType::NOT_FOUND;
+std::vector<std::string> EspNvsKeyValue::keys() {
+    std::vector<std::string> keys;
 
     nvs_iterator_t it = NULL;
-    esp_err_t res = nvs_entry_find(NVS_DEFAULT_PART_NAME, _nsname.c_str(), NVS_TYPE_ANY, &it);
+    esp_err_t res = nvs_entry_find_in_handle(_handle, NVS_TYPE_ANY, &it);
     while(res == ESP_OK) {
         nvs_entry_info_t info;
         nvs_entry_info(it, &info);
 
-        if(name == info.key) {
-            switch(info.type) {
-                case NVS_TYPE_I64: typ = DataType::INT64; break;
-                case NVS_TYPE_U32: typ = DataType::FLOAT32; break;
-                case NVS_TYPE_STR: typ = DataType::STRING; break;
-                default: break;
-            }
-            break;
-        }
+        keys.push_back(std::string(info.key));
 
         res = nvs_entry_next(&it);
     }
     nvs_release_iterator(it);
 
-    return typ;
+    return keys;
+}
+
+jac::KeyValueNamespace::DataType EspNvsKeyValue::getType(const std::string& name) {
+    nvs_type_t type;
+    esp_err_t err = nvs_find_key(_handle, name.c_str(), &type);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        return DataType::NOT_FOUND;
+    }
+    if (err != ESP_OK) {
+        throw std::runtime_error("Error finding key " + name + ": " + std::string(esp_err_to_name(err)));
+    }
+
+    switch(type) {
+        case NVS_TYPE_I64: return DataType::INT64;
+        case NVS_TYPE_U32: return DataType::FLOAT32;
+        case NVS_TYPE_STR: return DataType::STRING;
+        default:
+            return DataType::NOT_FOUND;
+    }
 }
 
 bool EspNvsKeyValue::commit() {
@@ -127,5 +138,3 @@ bool EspNvsKeyValue::commit() {
     }
     return res == ESP_OK;
 }
-
-

@@ -22,9 +22,9 @@ public:
     int64_t getInt(const std::string& name, int64_t def_value = 0);
     float getFloat(const std::string& name, float def_value = 0.f);
     std::string getString(const std::string& name, std::string def_value = "");
+    std::vector<std::string> keys();
 
     DataType getType(const std::string& name);
 
     bool commit();
 };
-
